@@ -161,17 +161,13 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
                     CONST.LED_B: value[2],
                 }
             )
-        if (
-            key
-            in [
-                CONST.OUTDOOR_CHIME,
-                CONST.MOTION_THRESHOLD,
-                CONST.VIDEO_PROFILE,
-                CONST.BRIGHTNESS,
-                "brightness",
-            ]
-            and not isinstance(value, tuple)
-        ):
+        if key in [
+            CONST.OUTDOOR_CHIME,
+            CONST.MOTION_THRESHOLD,
+            CONST.VIDEO_PROFILE,
+            CONST.BRIGHTNESS,
+            "brightness",
+        ] and not isinstance(value, tuple):
             key = CONST.BRIGHTNESS if key == "brightness" else key
             await self._async_set_setting({key: int(value)})
 
