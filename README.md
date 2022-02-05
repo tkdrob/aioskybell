@@ -5,7 +5,7 @@
 [![PyPI](https://img.shields.io/pypi/v/aioskybell)](https://pypi.org/project/aioskybell)
 ![Actions](https://github.com/tkdrob/aioskybell/workflows/Actions/badge.svg?branch=master)
 
-_Python API client for Lidarr/Radarr/Readarr/Sonarr._
+_Python API client for Skybell Doorbells._
 
 ## Installation
 
