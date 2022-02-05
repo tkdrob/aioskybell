@@ -11,10 +11,9 @@ from unittest.mock import patch
 import aiofiles
 import pytest
 
-from aioskybell import Skybell
+from aioskybell import Skybell, exceptions
 from aioskybell import utils as UTILS
 from aioskybell.device import SkybellDevice
-from aioskybell.exceptions import SkybellAuthenticationException, SkybellException
 from aioskybell.helpers import const as CONST
 from tests import EMAIL, PASSWORD, load_fixture
 
@@ -222,7 +221,7 @@ async def test_get_devices(aresponses, client: Skybell) -> None:
 @pytest.mark.asyncio
 async def test_errors(aresponses, client: Skybell) -> None:
     """Test errors."""
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await client.async_get_devices()
 
     aresponses.add(
@@ -235,7 +234,7 @@ async def test_errors(aresponses, client: Skybell) -> None:
             text=load_fixture("403.json"),
         ),
     )
-    with pytest.raises(SkybellAuthenticationException):
+    with pytest.raises(exceptions.SkybellAuthenticationException):
         await client.async_login()
 
     with patch("aioskybell.asyncio.sleep"), patch(
@@ -246,18 +245,18 @@ async def test_errors(aresponses, client: Skybell) -> None:
         )
         await client.async_login()
 
-    with pytest.raises(SkybellAuthenticationException):
+    with pytest.raises(exceptions.SkybellAuthenticationException):
         await client.async_login(username="test")
 
-    with pytest.raises(SkybellAuthenticationException):
+    with pytest.raises(exceptions.SkybellAuthenticationException):
         await client.async_login(password="test")
 
-    with pytest.raises(SkybellAuthenticationException):
+    with pytest.raises(exceptions.SkybellAuthenticationException):
         await Skybell().async_login()
 
     login_response(aresponses)
     login_response(aresponses)
-    with patch("aioskybell.asyncio.sleep"), pytest.raises(SkybellException):
+    with patch("aioskybell.asyncio.sleep"), pytest.raises(exceptions.SkybellException):
         await client.async_get_devices()
 
     loop = asyncio.get_running_loop()
@@ -409,31 +408,31 @@ async def test_async_change_setting(aresponses, client: Skybell) -> None:
     device_settings(aresponses)
     await device.async_set_setting("brightness", 33)
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await client.async_get_device("foo")
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.DO_NOT_DISTURB, 4)
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.DO_NOT_RING, 4)
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.OUTDOOR_CHIME, 4)
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.MOTION_THRESHOLD, 33)
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.VIDEO_PROFILE, 5)
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.LED_COLOR, [-1, 0, 0])
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting("hs_color", True)
 
-    with pytest.raises(SkybellException):
+    with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.BRIGHTNESS, 101)
 
     loop = asyncio.get_running_loop()
