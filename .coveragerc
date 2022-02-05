@@ -1,6 +1,16 @@
 [run]
-omit = 
-    skybellpy/__main__.py
-    skybellpy/helpers/*
-    tests/*
+source = aioskybell
+
+omit =
+    # omit setup
     setup.py
+
+    # omit tests
+    tests/*
+
+    # omit example
+    example.py
+
+[report]
+exclude_lines =
+    if TYPE_CHECKING:

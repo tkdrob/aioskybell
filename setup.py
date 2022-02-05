@@ -1,36 +1,33 @@
-#!/usr/bin/env python3
-"""skybellpy setup script."""
-from setuptools import setup, find_packages
-from skybellpy.helpers.constants import (__version__, PROJECT_PACKAGE_NAME,
-                                       PROJECT_LICENSE, PROJECT_URL,
-                                       PROJECT_EMAIL, PROJECT_DESCRIPTION,
-                                       PROJECT_CLASSIFIERS, PROJECT_AUTHOR,
-                                       PROJECT_LONG_DESCRIPTION)
+"""The setup script."""
+from setuptools import find_packages, setup
 
-PACKAGES = find_packages(exclude=['tests', 'tests.*'])
+with open("README.md") as readme_file:
+    readme = readme_file.read()
 
 setup(
-    name=PROJECT_PACKAGE_NAME,
-    version=__version__,
-    description=PROJECT_DESCRIPTION,
-    long_description=PROJECT_LONG_DESCRIPTION,
-    author=PROJECT_AUTHOR,
-    author_email=PROJECT_EMAIL,
-    license=PROJECT_LICENSE,
-    url=PROJECT_URL,
-    platforms='any',
-    py_modules=['skybellpy'],
-    packages=PACKAGES,
-    include_package_data=True,
-    install_requires=[
-        'requests>=2,<3',
-        'colorlog>=3.0.1'
+    name="aioskybell",
+    version="master",
+    author="Robert Hillis",
+    author_email="tkdrob4390@yahoo.com",
+    description="A Skybell HD Python library running on Python 3.",
+    long_description=readme,
+    long_description_content_type="text/markdown",
+    url="https://github.com/tkdrob/aioskybell",
+    package_data={"aioskybell": ["py.typed"]},
+    packages=find_packages(include=["aioskybell", "aioskybell*"]),
+    install_requires=["aiohttp>=3.6.1,<4.0", "aiofiles>=0.3.0"],
+    keywords=["aioskybell", "skybell"],
+    license="MIT license",
+    classifiers=[
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    test_suite='tests',
-    entry_points={
-        'console_scripts': [
-            'skybellpy = skybellpy.__main__:main'
-        ]
-    },
-    classifiers=PROJECT_CLASSIFIERS
+    python_requires=">=3.8",
 )
