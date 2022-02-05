@@ -26,7 +26,7 @@ jobs:
         run:  make requirements
 
       - name: 🖤 Format with black
-        run:  black . --check
+        run:  black aioskybell --check
 
       - name: 🗃 Organize with isort
         run:  isort .
