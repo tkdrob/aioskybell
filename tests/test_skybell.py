@@ -32,6 +32,20 @@ def login_response(aresponses):
     )
 
 
+def failed_login_response(aresponses):
+    """Generate failed login response."""
+    aresponses.add(
+        "cloud.myskybell.com",
+        "/api/v3/login/",
+        "post",
+        aresponses.Response(
+            status=401,
+            headers={"Content-Type": "application/json"},
+            text=load_fixture("403.json"),
+        ),
+    )
+
+
 def devices_response(aresponses):
     """Generate devices response."""
     aresponses.add(
@@ -231,10 +245,9 @@ async def test_errors(aresponses, client: Skybell) -> None:
         aresponses.Response(
             status=403,
             headers={"Content-Type": "application/json"},
-            text=load_fixture("403.json"),
         ),
     )
-    with pytest.raises(exceptions.SkybellAuthenticationException):
+    with pytest.raises(exceptions.SkybellException):
         await client.async_login()
 
     with patch("aioskybell.asyncio.sleep"), patch(
@@ -245,9 +258,11 @@ async def test_errors(aresponses, client: Skybell) -> None:
         )
         await client.async_login()
 
+    failed_login_response(aresponses)
     with pytest.raises(exceptions.SkybellAuthenticationException):
         await client.async_login(username="test")
 
+    failed_login_response(aresponses)
     with pytest.raises(exceptions.SkybellAuthenticationException):
         await client.async_login(password="test")
 
