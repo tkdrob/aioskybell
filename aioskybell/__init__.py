@@ -14,6 +14,7 @@ import logging
 import os
 from typing import Any, cast
 
+from aiohttp import ClientConnectorError
 from aiohttp.client import ClientError, ClientSession, ClientTimeout
 
 from . import utils as UTILS
@@ -106,12 +107,9 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             CONST.TOKEN: cast(str, self.cache(CONST.TOKEN)),
         }
 
-        try:
-            response = await self.async_send_request(
-                "post", CONST.LOGIN_URL, json_data=login_data, retry=False
-            )
-        except SkybellException as exc:
-            raise SkybellAuthenticationException(self) from exc
+        response = await self.async_send_request(
+            "post", CONST.LOGIN_URL, json_data=login_data, retry=False
+        )
 
         _LOGGER.debug("Login Response: %s", response)
 
@@ -211,7 +209,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
                 headers=headers,
                 timeout=ClientTimeout(30),
             )
-        except ClientError as exc:
+        except (ClientConnectorError, ClientError) as exc:
             _LOGGER.warning("Skybell request exception: %s", exc)
 
             if retry:
@@ -228,6 +226,8 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         _result = await response.json()
         if response.status < 400:
             return _result
+        if response.status == 401:
+            raise SkybellAuthenticationException(self, _result)
         raise SkybellException(self, _result)
 
     def cache(self, key: str) -> str | dict[str, CONST.DeviceType]:
