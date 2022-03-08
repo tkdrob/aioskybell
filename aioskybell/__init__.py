@@ -55,6 +55,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             self._close_session = True
         self._session = session
         self._login_sleep = login_sleep
+        self._user: dict[str, str] = {}
 
         # Create a new cache template
         self._cache: dict[str, str | dict[str, CONST.DeviceType]] = {
@@ -84,6 +85,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             and self._auto_login
         ):
             await self.async_login()
+        self._user = await self.async_send_request(method="get", url=CONST.USERS_ME_URL)
         return await self.async_get_devices()
 
     async def async_login(self, username: str = None, password: str = None) -> bool:
@@ -177,6 +179,21 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             await device.async_update()
 
         return device
+
+    @property
+    def user_id(self) -> str:
+        """Return logged in user id."""
+        return self._user["id"]
+
+    @property
+    def user_first_name(self) -> str:
+        """Return logged in user first name."""
+        return self._user["firstName"]
+
+    @property
+    def user_last_name(self) -> str:
+        """Return logged in user last name."""
+        return self._user["lastName"]
 
     async def async_send_request(  # pylint:disable=too-many-arguments
         self,

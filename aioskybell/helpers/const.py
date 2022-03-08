@@ -1,4 +1,6 @@
 """AIOSkybell constants."""
+from enum import Enum
+
 CACHE_PATH = "./skybell.pickle"
 
 # URLS
@@ -22,37 +24,48 @@ SUBSCRIPTION_URL = BASE_URL + "subscriptions/$SUBSCRIPTIONID$"
 SUBSCRIPTION_INFO_URL = SUBSCRIPTION_URL + "/info/"
 SUBSCRIPTION_SETTINGS_URL = SUBSCRIPTION_URL + "/settings/"
 
+
+# ACLs
+class ACLType(str, Enum):
+    """ACL types."""
+
+    BASIC = "device:basic"
+    OWNER = "owner"
+    READ = "device:read"
+
+
 # GENERAL
+ACCESS_TOKEN = "access_token"
 APP_ID = "app_id"
 CLIENT_ID = "client_id"
-TOKEN = "token"
-ACCESS_TOKEN = "access_token"
 DEVICES = "devices"
+TOKEN = "token"
 
 # DEVICE
-NAME = "name"
+ACL = "acl"
+AVATAR = "avatar"
+AVATAR_URL = "url"
 ID = "id"
-TYPE = "type"
-STATUS = "status"
-STATUS_UP = "up"
 LOCATION = "location"
 LOCATION_LAT = "lat"
 LOCATION_LNG = "lng"
-AVATAR = "avatar"
-AVATAR_URL = "url"
 MEDIA_URL = "media"
+NAME = "name"
+STATUS = "status"
+STATUS_UP = "up"
+TYPE = "type"
 
 # DEVICE INFO
+CHECK_IN = "checkedInAt"
 WIFI_LINK = "wifiLink"
 WIFI_SSID = "essid"
-CHECK_IN = "checkedInAt"
 
 # DEVICE ACTIVITIES
+CREATED_AT = "createdAt"
 EVENT = "event"
-EVENT_ON_DEMAND = "application:on-demand"
 EVENT_BUTTON = "device:sensor:button"
 EVENT_MOTION = "device:sensor:motion"
-CREATED_AT = "createdAt"
+EVENT_ON_DEMAND = "application:on-demand"
 
 STATE = "state"
 STATE_READY = "ready"
@@ -61,19 +74,19 @@ VIDEO_STATE = "videoState"
 VIDEO_STATE_READY = "download:ready"
 
 # DEVICE SETTINGS
+BRIGHTNESS = "led_intensity"
 DO_NOT_DISTURB = "do_not_disturb"
 DO_NOT_RING = "do_not_ring"
-OUTDOOR_CHIME = "chime_level"
+LED_B = "green_b"
+LED_COLOR = "hs_color"
+LED_G = "green_g"
+LED_R = "green_r"
+LED_COLORS = [LED_R, LED_G, LED_B]
 MOTION = "motion_sensor"
 MOTION_POLICY = "motion_policy"
 MOTION_THRESHOLD = "motion_threshold"
+OUTDOOR_CHIME = "chime_level"
 VIDEO_PROFILE = "video_profile"
-LED_R = "green_r"
-LED_G = "green_g"
-LED_B = "green_b"
-LED_COLOR = "hs_color"
-LED_COLORS = [LED_R, LED_G, LED_B]
-BRIGHTNESS = "led_intensity"
 
 ALL_SETTINGS = [
     DO_NOT_DISTURB,

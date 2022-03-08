@@ -4,8 +4,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from aioskybell import Skybell
-    from aioskybell.device import SkybellDevice
+    from . import Skybell
+    from .device import SkybellDevice
 
 
 class SkybellException(Exception):

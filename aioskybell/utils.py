@@ -13,14 +13,16 @@ import aiofiles
 async def async_save_cache(
     data: dict[str, str | dict[str, dict[str, dict[str, dict[str, str]]]]],
     filename: str,
-):
+) -> None:
     """Save cache from file."""
     async with aiofiles.open(filename, "wb") as file:
         pickled_foo = pickle.dumps(data)
         await file.write(pickled_foo)
 
 
-async def async_load_cache(filename: str):
+async def async_load_cache(
+    filename: str,
+) -> dict[str, str | dict[str, dict[str, dict[str, dict[str, str]]]]]:
     """Load cache from file."""
     async with aiofiles.open(filename, "rb") as file:
         pickled_foo = await file.read()

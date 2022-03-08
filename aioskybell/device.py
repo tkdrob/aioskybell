@@ -7,7 +7,7 @@ from distutils.util import strtobool
 from typing import TYPE_CHECKING, cast
 
 from . import utils as UTILS
-from .exceptions import SkybellException
+from .exceptions import SkybellAuthenticationException, SkybellException
 from .helpers import const as CONST
 from .helpers import errors as ERROR
 
@@ -19,6 +19,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instance-attributes
     """Class to represent each Skybell device."""
+
+    _skybell: Skybell
 
     def __init__(self, device_json: dict[str, str], skybell: Skybell) -> None:
         """Set up Skybell device."""
@@ -74,13 +76,15 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             self._avatar_json = await self._async_avatar_request()
             UTILS.update(self._avatar_json, avatar_json or {})
 
-        if refresh or info_json or len(self._info_json) == 0:
-            self._info_json = await self._async_info_request()
-            UTILS.update(self._info_json, info_json or {})
+        if self.acl == CONST.ACLType.OWNER.value:
+            if refresh or info_json or len(self._info_json) == 0:
+                self._info_json = await self._async_info_request()
+                UTILS.update(self._info_json, info_json or {})
 
-        if refresh or settings_json or len(self._settings_json) == 0:
-            self._settings_json = await self._async_settings_request()
-            UTILS.update(self._settings_json, settings_json or {})
+        if self.acl != CONST.ACLType.READ.value:
+            if refresh or settings_json or len(self._settings_json) == 0:
+                self._settings_json = await self._async_settings_request()
+                UTILS.update(self._settings_json, settings_json or {})
 
         if refresh:
             await self._async_update_activities()
@@ -173,6 +177,10 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     async def _async_set_setting(self, settings: dict[str, str | int]) -> None:
         """Validate the settings and then send the PATCH request."""
+        if self.acl == CONST.ACLType.READ.value:
+            raise SkybellAuthenticationException(
+                self, "Attempted setting with invalid scope"
+            )
         for key, value in settings.items():
             _validate_setting(key, value)
 
@@ -180,6 +188,16 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             await self._async_settings_request(method="patch", json_data=settings)
         except SkybellException:
             _LOGGER.warning("Exception changing settings: %s", settings)
+
+    @property
+    def acl(self) -> str:
+        """Get access level to device."""
+        return self._device_json.get(CONST.ACL, "")
+
+    @property
+    def owner(self) -> bool:
+        """Return if user has admin rights to device."""
+        return self.acl == CONST.ACLType.OWNER.value
 
     @property
     def user_id(self) -> str:
@@ -265,7 +283,9 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def do_not_disturb(self) -> bool:
         """Get if do not disturb is enabled."""
-        return bool(strtobool(str(self._settings_json.get(CONST.DO_NOT_DISTURB))))
+        return bool(
+            strtobool(str(self._settings_json.get(CONST.DO_NOT_DISTURB, "false")))
+        )
 
     @property
     def do_not_ring(self) -> bool:
@@ -275,7 +295,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def outdoor_chime_level(self) -> int:
         """Get devices outdoor chime level."""
-        return int(self._settings_json.get(CONST.OUTDOOR_CHIME, ""))
+        return int(self._settings_json.get(CONST.OUTDOOR_CHIME, "0"))
 
     @property
     def outdoor_chime(self) -> bool:
@@ -290,12 +310,12 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def motion_threshold(self) -> int:
         """Get devices motion threshold."""
-        return int(self._settings_json.get(CONST.MOTION_THRESHOLD, ""))
+        return int(self._settings_json.get(CONST.MOTION_THRESHOLD, "0"))
 
     @property
     def video_profile(self) -> int:
         """Get devices video profile."""
-        return int(self._settings_json.get(CONST.VIDEO_PROFILE, ""))
+        return int(self._settings_json.get(CONST.VIDEO_PROFILE, "0"))
 
     @property
     def led_rgb(self) -> tuple[int, int, int]:
@@ -309,7 +329,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def led_intensity(self) -> int:
         """Get devices LED intensity."""
-        return int(self._settings_json.get(CONST.BRIGHTNESS, ""))
+        return int(self._settings_json.get(CONST.BRIGHTNESS, "0"))
 
     @property
     def desc(self) -> str:
