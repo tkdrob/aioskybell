@@ -1,8 +1,8 @@
 """Tests configuration."""
 # pylint:disable=redefined-outer-name
 import asyncio
-from typing import AsyncGenerator
 from collections.abc import Callable
+from typing import AsyncGenerator
 
 import pytest_asyncio
 from aiohttp import ClientSession
