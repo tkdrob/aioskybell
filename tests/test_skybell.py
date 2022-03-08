@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import aiofiles
 import pytest
+from aresponses import ResponsesMockServer
 
 from aioskybell import Skybell, exceptions
 from aioskybell import utils as UTILS
@@ -18,7 +19,7 @@ from aioskybell.helpers import const as CONST
 from tests import EMAIL, PASSWORD, load_fixture
 
 
-def login_response(aresponses):
+def login_response(aresponses: ResponsesMockServer) -> None:
     """Generate login response."""
     aresponses.add(
         "cloud.myskybell.com",
@@ -32,7 +33,21 @@ def login_response(aresponses):
     )
 
 
-def failed_login_response(aresponses):
+def users_me(aresponses: ResponsesMockServer) -> None:
+    """Generate login response."""
+    aresponses.add(
+        "cloud.myskybell.com",
+        "/api/v3/users/me/",
+        "get",
+        aresponses.Response(
+            status=201,
+            headers={"Content-Type": "application/json"},
+            text=load_fixture("me.json"),
+        ),
+    )
+
+
+def failed_login_response(aresponses: ResponsesMockServer) -> None:
     """Generate failed login response."""
     aresponses.add(
         "cloud.myskybell.com",
@@ -46,7 +61,7 @@ def failed_login_response(aresponses):
     )
 
 
-def devices_response(aresponses):
+def devices_response(aresponses: ResponsesMockServer) -> None:
     """Generate devices response."""
     aresponses.add(
         "cloud.myskybell.com",
@@ -60,7 +75,7 @@ def devices_response(aresponses):
     )
 
 
-def _device(aresponses):
+def _device(aresponses: ResponsesMockServer) -> None:
     aresponses.add(
         "cloud.myskybell.com",
         "/api/v3/devices/012345670123456789abcdef/",
@@ -73,7 +88,7 @@ def _device(aresponses):
     )
 
 
-def old_event(aresponses):
+def old_event(aresponses: ResponsesMockServer) -> None:
     """Generate old event response."""
     aresponses.add(
         "cloud.myskybell.com",
@@ -87,7 +102,7 @@ def old_event(aresponses):
     )
 
 
-def device_info(aresponses):
+def device_info(aresponses: ResponsesMockServer) -> None:
     """Generate device info response."""
     aresponses.add(
         "cloud.myskybell.com",
@@ -101,11 +116,25 @@ def device_info(aresponses):
     )
 
 
-def device_avatar(aresponses):
+def device_info_forbidden(aresponses: ResponsesMockServer) -> None:
+    """Generate device info response."""
+    aresponses.add(
+        "cloud.myskybell.com",
+        "/api/v3/devices/012345670123456789abcdef/info/",
+        "get",
+        aresponses.Response(
+            status=401,
+            headers={"Content-Type": "application/json"},
+            text=load_fixture("device-info-forbidden.json"),
+        ),
+    )
+
+
+def device_avatar(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate device avatar response."""
     aresponses.add(
         "cloud.myskybell.com",
-        "/api/v3/devices/012345670123456789abcdef/avatar/",
+        f"/api/v3/devices/{device}/avatar/",  # 012345670123456789abcdef
         "get",
         aresponses.Response(
             status=200,
@@ -115,11 +144,12 @@ def device_avatar(aresponses):
     )
 
 
-def device_settings(aresponses):
+# Forbidden returns None
+def device_settings(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate device settings response."""
     aresponses.add(
         "cloud.myskybell.com",
-        "/api/v3/devices/012345670123456789abcdef/settings/",
+        f"/api/v3/devices/{device}/settings/",
         "get",
         aresponses.Response(
             status=200,
@@ -129,11 +159,11 @@ def device_settings(aresponses):
     )
 
 
-def device_activities(aresponses):
+def device_activities(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate device activities response."""
     aresponses.add(
         "cloud.myskybell.com",
-        "/api/v3/devices/012345670123456789abcdef/activities/",
+        f"/api/v3/devices/{device}/activities/",
         "get",
         aresponses.Response(
             status=200,
@@ -151,14 +181,18 @@ async def test_loop() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_initialize_and_logout(aresponses) -> None:
+async def test_async_initialize_and_logout(aresponses: ResponsesMockServer) -> None:
     """Test initializing and logout."""
     client = Skybell(
         EMAIL, PASSWORD, auto_login=True, get_devices=True, login_sleep=False
     )
     login_response(aresponses)
     devices_response(aresponses)
+    users_me(aresponses)
     data = await client.async_initialize()
+    assert client.user_id == "1234567890abcdef12345678"
+    assert client.user_first_name == "First"
+    assert client.user_last_name == "Last"
     assert isinstance(data[0], SkybellDevice)
     assert client._cache["access_token"] == "superlongkey"
     assert client._cache["app_id"] is not None
@@ -178,12 +212,15 @@ async def test_async_initialize_and_logout(aresponses) -> None:
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
+    assert not aresponses.assert_no_unused_routes()
+
 
 @pytest.mark.asyncio
-async def test_get_devices(aresponses, client: Skybell) -> None:
+async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> None:
     """Test getting devices."""
     login_response(aresponses)
     devices_response(aresponses)
+    users_me(aresponses)
 
     data = await client.async_get_device("012345670123456789abcdef", refresh=True)
     assert isinstance(data, SkybellDevice)
@@ -207,20 +244,30 @@ async def test_get_devices(aresponses, client: Skybell) -> None:
 
     login_response(aresponses)
     data = await client.async_initialize()
-    device_avatar(aresponses)
+    device_avatar(aresponses, device.device_id)
     device_info(aresponses)
-    device_settings(aresponses)
-    device_avatar(aresponses)
+    device_settings(aresponses, device.device_id)
+    device_avatar(aresponses, device.device_id)
     device_info(aresponses)
-    device_settings(aresponses)
-    device_activities(aresponses)
+    device_settings(aresponses, device.device_id)
+    device_activities(aresponses, device.device_id)
     await client.async_get_device("012345670123456789abcdef", refresh=True)
 
     devices_response(aresponses)
-    device_activities(aresponses)
+    device_activities(aresponses, device.device_id)
+    device = client._devices["012345670123456789abcdee"]
+    device_avatar(aresponses, device.device_id)
+    device_activities(aresponses, device.device_id)
+    assert not device._settings_json
+    assert not device._info_json
+    device = client._devices["012345670123456789abcded"]
+    device_avatar(aresponses, device.device_id)
+    device_settings(aresponses, device.device_id)
+    device_activities(aresponses, device.device_id)
+    assert not device._info_json
     devs = await client.async_get_devices(refresh=True)
-    assert isinstance(devs[0], SkybellDevice)
-    assert isinstance(client._devices["012345670123456789abcdef"], SkybellDevice)
+    for dev in devs:
+        assert isinstance(dev, SkybellDevice)
 
     with patch(
         "aioskybell.device.SkybellDevice._async_activities_request", return_value=None
@@ -231,9 +278,11 @@ async def test_get_devices(aresponses, client: Skybell) -> None:
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
+    assert not aresponses.assert_no_unused_routes()
+
 
 @pytest.mark.asyncio
-async def test_errors(aresponses, client: Skybell) -> None:
+async def test_errors(aresponses: ResponsesMockServer, client: Skybell) -> None:
     """Test errors."""
     with pytest.raises(exceptions.SkybellException):
         await client.async_get_devices()
@@ -277,25 +326,28 @@ async def test_errors(aresponses, client: Skybell) -> None:
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
+    assert not aresponses.assert_no_unused_routes()
+
 
 @pytest.mark.asyncio
-async def test_async_refresh_device(aresponses, client: Skybell) -> None:
+async def test_async_refresh_device(
+    aresponses: ResponsesMockServer, client: Skybell
+) -> None:
     """Test refreshing device."""
 
     login_response(aresponses)
-    _device(aresponses)
     devices_response(aresponses)
-    device_avatar(aresponses)
+    _device(aresponses)
     device_info(aresponses)
     device_info(aresponses)
-    device_settings(aresponses)
-    device_avatar(aresponses)
-    device_info(aresponses)
-    device_settings(aresponses)
-    device_activities(aresponses)
 
     data = await client.async_get_devices()
     device = data[0]
+    device_activities(aresponses, device.device_id)
+    device_settings(aresponses, device.device_id)
+    device_avatar(aresponses, device.device_id)
+    device_settings(aresponses, device.device_id)
+    device_avatar(aresponses, device.device_id)
     await device.async_update(get_devices=True)
     assert device._avatar_json["createdAt"] == "2020-03-31T04:13:48.640Z"
     assert device._avatar_json["url"] == "string"
@@ -350,6 +402,8 @@ async def test_async_refresh_device(aresponses, client: Skybell) -> None:
     assert data["updatedAt"] == "2020-03-30T12:35:02.566Z"
     assert data["videoState"] == "download:ready"
 
+    assert device.acl == CONST.ACLType.OWNER.value
+    assert device.owner is True
     assert device.user_id == "0123456789abcdef01234567"
     assert device.mac == "ff:ff:ff:ff:ff:ff"
     assert device.serial_no == "0123456789"
@@ -387,9 +441,13 @@ async def test_async_refresh_device(aresponses, client: Skybell) -> None:
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
+    assert not aresponses.assert_no_unused_routes()
+
 
 @pytest.mark.asyncio
-async def test_async_change_setting(aresponses, client: Skybell) -> None:
+async def test_async_change_setting(
+    aresponses: ResponsesMockServer, client: Skybell
+) -> None:
     """Test changing settings on device."""
 
     login_response(aresponses)
@@ -400,27 +458,16 @@ async def test_async_change_setting(aresponses, client: Skybell) -> None:
     with patch("aioskybell.device.SkybellDevice._async_settings_request"):
         await device.async_set_setting(CONST.DO_NOT_DISTURB, True)
     assert device._settings_json is not None
-    device_settings(aresponses)
     await device.async_set_setting(CONST.DO_NOT_RING, True)
-    device_settings(aresponses)
     await device.async_set_setting(CONST.MOTION_POLICY, True)
-    device_settings(aresponses)
     await device.async_set_setting("motion_sensor", True)
-    device_settings(aresponses)
     await device.async_set_setting(CONST.MOTION_POLICY, True)
-    device_settings(aresponses)
     await device.async_set_setting(CONST.LED_COLOR, (0, 0, 0))
-    device_settings(aresponses)
     await device.async_set_setting("hs_color", (0, 0, 0))
-    device_settings(aresponses)
     await device.async_set_setting(CONST.OUTDOOR_CHIME, 1)
-    device_settings(aresponses)
     await device.async_set_setting(CONST.MOTION_THRESHOLD, 32)
-    device_settings(aresponses)
     await device.async_set_setting(CONST.VIDEO_PROFILE, 1)
-    device_settings(aresponses)
     await device.async_set_setting(CONST.BRIGHTNESS, 33)
-    device_settings(aresponses)
     await device.async_set_setting("brightness", 33)
 
     with pytest.raises(exceptions.SkybellException):
@@ -450,8 +497,13 @@ async def test_async_change_setting(aresponses, client: Skybell) -> None:
     with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.BRIGHTNESS, 101)
 
+    with pytest.raises(exceptions.SkybellAuthenticationException):
+        await data[1].async_set_setting(CONST.BRIGHTNESS, 101)
+
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
+
+    assert aresponses.assert_no_unused_routes() is None
 
 
 @pytest.mark.asyncio
@@ -461,9 +513,9 @@ async def test_cache(client: Skybell) -> None:
     async with aiofiles.open(client._cache_path, "wb"):
         pass
 
-    with patch("aioskybell.Skybell.async_login"), patch(
-        "aioskybell.Skybell.async_get_devices"
-    ), patch("aioskybell.Skybell._async_save_cache"):
+    with patch("aioskybell.Skybell._async_save_cache"), patch(
+        "aioskybell.Skybell.async_send_request"
+    ):
         await client.async_initialize()
 
     assert os.path.exists(client._cache_path) is False

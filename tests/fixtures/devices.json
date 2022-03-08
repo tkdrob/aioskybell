@@ -15,5 +15,39 @@
     "updatedAt": "2020-10-20T14:35:00.745Z",
     "id": "012345670123456789abcdef",
     "acl": "owner"
+  },
+  {
+    "user": "0123456789abcdef01234568",
+    "uuid": "0123456790",
+    "resourceId": "012345670123456789abcdee",
+    "deviceInviteToken": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde0",
+    "location":{
+      "lat": "-1.0",
+      "lng": "1.0"
+    },
+    "name": "Front Door",
+    "type": "skybell hd",
+    "status": "down",
+    "createdAt": "2020-10-20T14:35:00.745Z",
+    "updatedAt": "2020-10-20T14:35:00.745Z",
+    "id": "012345670123456789abcdee",
+    "acl": "device:read"
+  },
+  {
+    "user": "0123456789abcdef01234569",
+    "uuid": "0123456791",
+    "resourceId": "012345670123456789abcdd",
+    "deviceInviteToken": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde1",
+    "location":{
+      "lat": "-1.0",
+      "lng": "1.0"
+    },
+    "name": "Front Door",
+    "type": "skybell hd",
+    "status": "up",
+    "createdAt": "2020-10-20T14:35:00.745Z",
+    "updatedAt": "2020-10-20T14:35:00.745Z",
+    "id": "012345670123456789abcded",
+    "acl": "device:basic"
   }
 ]
