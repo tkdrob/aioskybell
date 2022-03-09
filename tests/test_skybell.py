@@ -260,6 +260,7 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     device_activities(aresponses, device.device_id)
     assert not device._settings_json
     assert not device._info_json
+    assert device.mac is None
     device = client._devices["012345670123456789abcded"]
     device_avatar(aresponses, device.device_id)
     device_settings(aresponses, device.device_id)
