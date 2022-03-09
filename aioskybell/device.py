@@ -205,19 +205,21 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         return self._device_json["user"]
 
     @property
-    def mac(self) -> str:
+    def mac(self) -> str | None:
         """Get device mac address."""
-        return self._device_json.get("mac", "")
+        if mac := self._info_json.get("mac"):
+            return cast(str, mac)
+        return None
 
     @property
     def serial_no(self) -> str:
         """Get device serial number."""
-        return self._device_json.get("serialNo", "")
+        return cast(str, self._info_json.get("serialNo", ""))
 
     @property
     def firmware_ver(self) -> str:
         """Get device firmware version."""
-        return self._device_json.get("firmwareVersion", "")
+        return cast(str, self._info_json.get("firmwareVersion", ""))
 
     @property
     def name(self) -> str:
