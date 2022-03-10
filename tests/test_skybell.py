@@ -88,11 +88,11 @@ def _device(aresponses: ResponsesMockServer) -> None:
     )
 
 
-def old_event(aresponses: ResponsesMockServer) -> None:
+def new_activity(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate old event response."""
     aresponses.add(
         "cloud.myskybell.com",
-        "/api/v3/devices/012345670123456789abcdef/activities/",
+        f"/api/v3/devices/{device}/activities/",
         "get",
         aresponses.Response(
             status=200,
@@ -134,7 +134,7 @@ def device_avatar(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate device avatar response."""
     aresponses.add(
         "cloud.myskybell.com",
-        f"/api/v3/devices/{device}/avatar/",  # 012345670123456789abcdef
+        f"/api/v3/devices/{device}/avatar/",
         "get",
         aresponses.Response(
             status=200,
@@ -170,6 +170,49 @@ def device_activities(aresponses: ResponsesMockServer, device: str) -> None:
             headers={"Content-Type": "application/json"},
             text=load_fixture("activities.json"),
         ),
+    )
+
+
+def avatar_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
+    """Generate avatar camera image response."""
+    aresponses.add(
+        "v3-production-devices-avatar.s3-us-west-2.amazonaws.com",
+        f"/{device}.jpg",
+        "get",
+        aresponses.Response(
+            status=200,
+            headers={"Content-Type": "image/jpeg"},
+            body=bytes(1),
+        ),
+    )
+
+
+def activity_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
+    """Generate activity camera image response."""
+    aresponses.add(
+        "skybell-thumbnails-stage.s3.amazonaws.com",
+        f"/{device}/1646859244793-951{device}_{device}.jpeg",
+        "get",
+        aresponses.Response(
+            status=200,
+            headers={"Content-Type": "image/jpeg"},
+            body=bytes(1),
+        ),
+    )
+
+
+def new_activity_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
+    """Generate activity camera image response."""
+    aresponses.add(
+        "skybell-thumbnails-stage.s3.amazonaws.com",
+        f"/{device}/1646859244794-951{device}_{device}.jpeg",
+        "get",
+        aresponses.Response(
+            status=200,
+            headers={"Content-Type": "image/jpeg"},
+            body=bytes(2),
+        ),
+        match_querystring=True,
     )
 
 
@@ -251,10 +294,16 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     device_info(aresponses)
     device_settings(aresponses, device.device_id)
     device_activities(aresponses, device.device_id)
+    avatar_camera_image(aresponses, device.device_id)
+    activity_camera_image(aresponses, device.device_id)
     await client.async_get_device("012345670123456789abcdef", refresh=True)
 
     devices_response(aresponses)
     device_activities(aresponses, device.device_id)
+    avatar_camera_image(aresponses, device.device_id)
+    avatar_camera_image(aresponses, device.device_id)
+    activity_camera_image(aresponses, device.device_id)
+    activity_camera_image(aresponses, device.device_id)
     device = client._devices["012345670123456789abcdee"]
     device_avatar(aresponses, device.device_id)
     device_activities(aresponses, device.device_id)
@@ -266,15 +315,28 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     device_settings(aresponses, device.device_id)
     device_activities(aresponses, device.device_id)
     assert not device._info_json
-    devs = await client.async_get_devices(refresh=True)
-    for dev in devs:
+    assert device.images == {}
+    for dev in await client.async_get_devices(refresh=True):
         assert isinstance(dev, SkybellDevice)
-
-    with patch(
-        "aioskybell.device.SkybellDevice._async_activities_request", return_value=None
-    ):
-        await device._async_update_activities()
-    assert device._activities == []
+    new_activity(aresponses, device.device_id)
+    assert device._activities[0][CONST.ID] == "1234567890ab1234567890ab"
+    assert (
+        device._activities[0][CONST.MEDIA_URL]
+        == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244793-951012345670123456789abcdef_012345670123456789abcdef.jpeg"
+    )
+    assert device.images == {"activity": b"\x00", "avatar": b"\x00"}
+    assert (
+        device.image_url
+        == "https://v3-production-devices-avatar.s3-us-west-2.amazonaws.com/012345670123456789abcdef.jpg"
+    )
+    new_activity_camera_image(aresponses, "012345670123456789abcdef")
+    await device._async_update_activities()
+    assert device.images == {"activity": b"\x00\x00", "avatar": b"\x00"}
+    assert device._activities[0][CONST.ID] == "1234567890ab1234567890ac"
+    assert (
+        device._activities[0][CONST.MEDIA_URL]
+        == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef.jpeg"
+    )
 
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
@@ -335,7 +397,6 @@ async def test_async_refresh_device(
     aresponses: ResponsesMockServer, client: Skybell
 ) -> None:
     """Test refreshing device."""
-
     login_response(aresponses)
     devices_response(aresponses)
     _device(aresponses)
@@ -349,15 +410,15 @@ async def test_async_refresh_device(
     device_avatar(aresponses, device.device_id)
     device_settings(aresponses, device.device_id)
     device_avatar(aresponses, device.device_id)
+    avatar_camera_image(aresponses, device.device_id)
+    activity_camera_image(aresponses, device.device_id)
     await device.async_update(get_devices=True)
-    assert device._avatar_json["createdAt"] == "2020-03-31T04:13:48.640Z"
-    assert device._avatar_json["url"] == "string"
     assert device._info_json["address"] == "1.2.3.4"
     assert (
         device._info_json["clientId"]
         == "1234567890abcdef1234567890abcdef1234567890abcdef"
     )
-    assert device._info_json["deviceId"] == "01234567890abcdef12345678"
+    assert device._info_json["deviceId"] == "01234567890abcdef1234567"
     assert device._info_json["firmwareVersion"] == "7082"
     assert device._info_json["hardwareRevision"] == "SKYBELL_TRIMPLUS_1000030-F"
     assert (
@@ -393,11 +454,9 @@ async def test_async_refresh_device(
     assert data["_id"] == "1234567890ab1234567890ab"
     assert data["callId"] == "1234567890123-1234567890abcd1234567890abcd"
     assert data["createdAt"] == "2020-03-30T12:35:02.204Z"
-    assert data["device"] == "5f8ef594362f31000833d959"
+    assert data["device"] == "0123456789abcdef01234567"
     assert data["event"] == "device:sensor:motion"
     assert data["id"] == "1234567890ab1234567890ab"
-    assert data["media"] == "string"
-    assert data["mediaSmall"] == "string"
     assert data["state"] == "ready"
     assert data["ttlStartDate"] == "2020-03-30T12:35:02.204Z"
     assert data["updatedAt"] == "2020-03-30T12:35:02.566Z"
@@ -415,8 +474,6 @@ async def test_async_refresh_device(
     assert device.status == {"wifiLink": "poor"}
     assert device.is_up is False
     assert device.location == ("-1.0", "1.0")
-    assert device.image == "string"
-    assert device.activity_image == "string"
     assert device.wifi_ssid == "wifi"
     assert device.last_check_in == "2020-03-31T04:13:37.000Z"
     assert device.do_not_disturb is False
@@ -436,13 +493,13 @@ async def test_async_refresh_device(
     assert isinstance(device.activities(event="device:sensor:motion"), list)
     assert isinstance(device.latest(event="device:sensor:motion"), dict)
 
-    old_event(aresponses)
+    device_activities(aresponses, device.device_id)
     await device.async_update()
 
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
-    assert not aresponses.assert_no_unused_routes()
+    assert aresponses.assert_no_unused_routes() is None
 
 
 @pytest.mark.asyncio

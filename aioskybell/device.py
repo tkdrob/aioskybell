@@ -24,7 +24,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     def __init__(self, device_json: dict[str, str], skybell: Skybell) -> None:
         """Set up Skybell device."""
-        self._activities: list = []
+        self._activities: list[dict[str, str]] = []
         self._avatar_json: dict[str, str] = {}
         self._device_id = device_json.get(CONST.ID, "")
         self._device_json = device_json
@@ -32,6 +32,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         self._settings_json: dict[str, str | int] = {}
         self._skybell = skybell
         self._type = device_json.get(CONST.TYPE, "")
+        self.images: dict[str, bytes] = {}
 
     async def _async_device_request(self) -> dict[str, str | dict[str, str]]:
         url = str.replace(CONST.DEVICE_URL, "$DEVID$", self.device_id)
@@ -55,7 +56,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     async def _async_activities_request(self) -> list[dict[str, str]]:
         url = str.replace(CONST.DEVICE_ACTIVITIES_URL, "$DEVID$", self.device_id)
-        return await self._skybell.async_send_request(method="get", url=url)
+        return await self._skybell.async_send_request(method="get", url=url) or []
 
     async def async_update(  # pylint:disable=too-many-arguments
         self,
@@ -73,7 +74,12 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             UTILS.update(self._device_json, device_json or {})
 
         if refresh or avatar_json or len(self._avatar_json) == 0:
-            self._avatar_json = await self._async_avatar_request()
+            result = await self._async_avatar_request()
+            if result[CONST.CREATED_AT] != self._avatar_json.get(CONST.CREATED_AT):
+                self.images[CONST.AVATAR] = await self._skybell.async_send_request(
+                    "get", result[CONST.URL]
+                )
+            self._avatar_json = result
             UTILS.update(self._avatar_json, avatar_json or {})
 
         if self.acl == CONST.ACLType.OWNER.value:
@@ -91,21 +97,38 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     async def _async_update_activities(self) -> None:
         """Update stored activities and update caches as required."""
-        self._activities = await self._async_activities_request() or []
+        activities = await self._async_activities_request()
+        if self._activities:
+            for act in activities:
+                if act[CONST.ID] not in [x[CONST.ID] for x in self._activities]:
+                    self.images[
+                        CONST.ACTIVITY
+                    ] = await self._skybell.async_send_request(
+                        "get", act[CONST.MEDIA_URL]
+                    )
+        else:
+            await self._async_update_events(activities=activities)
+            latest = self.latest()[CONST.MEDIA_URL]
+            self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
+                "get", latest
+            )
+        self._activities = activities
         _LOGGER.debug("Device Activities Response: %s", self._activities)
 
         await self._async_update_events()
 
-    async def _async_update_events(self) -> None:
+    async def _async_update_events(
+        self, activities: list[dict[str, str]] | None = None
+    ) -> None:
         """Update our cached list of latest activity events."""
         events = cast(CONST.EventType, self._skybell.dev_cache(self, CONST.EVENT)) or {}
 
-        for activity in self._activities:
-            event = activity.get(CONST.EVENT)
-            created_at = activity.get(CONST.CREATED_AT)
+        activities = activities or self._activities
+        for activity in activities:
+            event = activity[CONST.EVENT]
+            created_at = activity[CONST.CREATED_AT]
 
-            old_event = events.get(event)
-            if old_event and created_at < old_event.get(CONST.CREATED_AT):
+            if (old := events.get(event)) and created_at < old[CONST.CREATED_AT]:
                 continue
 
             events[event] = activity
@@ -114,7 +137,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     def activities(self, limit: int = 1, event: str = None) -> list[dict[str, str]]:
         """Return device activity information."""
-        activities = self._activities or []
+        activities = self._activities
 
         # Filter our activity array if requested
         if event:
@@ -124,7 +147,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         return activities[:limit]
 
     def latest(self, event: str = None) -> dict[str, str]:
-        """Return the latest event activity."""
+        """Return the latest event activity (motion or button)."""
         events = cast(CONST.EventType, self._skybell.dev_cache(self, CONST.EVENT)) or {}
         _LOGGER.debug(events)
 
@@ -257,14 +280,9 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         )
 
     @property
-    def image(self) -> str:
+    def image_url(self) -> str:
         """Get the most recent 'avatar' image."""
-        return self._avatar_json.get(CONST.AVATAR_URL, "")
-
-    @property
-    def activity_image(self) -> str:
-        """Get the most recent activity image."""
-        return self.latest().get(CONST.MEDIA_URL, "")
+        return self._avatar_json.get(CONST.URL, "")
 
     @property
     def wifi_status(self) -> str:

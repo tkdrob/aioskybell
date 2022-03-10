@@ -152,11 +152,11 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
 
             for device_json in response:
                 # Attempt to reuse an existing device
-                device = self._devices.get(device_json["id"])
+                device = self._devices.get(device_json[CONST.ID])
 
                 # No existing device, create a new one
                 if device:
-                    await device.async_update({device_json["id"]: device_json})
+                    await device.async_update({device_json[CONST.ID]: device_json})
                 else:
                     device = SkybellDevice(device_json, self)
                     self._devices[device.device_id] = device
@@ -183,7 +183,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
     @property
     def user_id(self) -> str:
         """Return logged in user id."""
-        return self._user["id"]
+        return self._user[CONST.ID]
 
     @property
     def user_first_name(self) -> str:
@@ -208,13 +208,13 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             await self.async_login()
 
         headers = headers if headers else {}
-        if len(self.cache(CONST.ACCESS_TOKEN)) > 0:
-            headers["Authorization"] = f"Bearer {self.cache(CONST.ACCESS_TOKEN)}"
-
-        headers["content-type"] = "application/json"
-        headers["accept"] = "*/*"
-        headers["x-skybell-app-id"] = cast(str, self.cache(CONST.APP_ID))
-        headers["x-skybell-client-id"] = cast(str, self.cache(CONST.CLIENT_ID))
+        if "cloud.myskybell.com" in url:
+            if len(self.cache(CONST.ACCESS_TOKEN)) > 0:
+                headers["Authorization"] = f"Bearer {self.cache(CONST.ACCESS_TOKEN)}"
+            headers["content-type"] = "application/json"
+            headers["accept"] = "*/*"
+            headers["x-skybell-app-id"] = cast(str, self.cache(CONST.APP_ID))
+            headers["x-skybell-client-id"] = cast(str, self.cache(CONST.CLIENT_ID))
 
         _LOGGER.debug("HTTP %s %s Request with headers: %s", method, url, headers)
 
@@ -235,12 +235,16 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
                 return await self.async_send_request(
                     method, url, headers, json_data, False
                 )
-
-            raise SkybellException(
-                self,
-                f"Request exception for '{url}' with - {exc}",
-            ) from exc
-        _result = await response.json()
+            if "cloud.myskybell.com" in url:
+                raise SkybellException(
+                    self,
+                    f"Request exception for '{url}' with - {exc}",
+                ) from exc
+            raise SkybellException(self, ("Failed getting image: %s", exc)) from exc
+        if "cloud.myskybell.com" in url:
+            _result = await response.json()
+        else:
+            _result = await response.read()
         if response.status < 400:
             return _result
         if response.status == 401:
