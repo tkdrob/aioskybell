@@ -520,7 +520,7 @@ async def test_async_change_setting(
     await device.async_set_setting(CONST.MOTION_POLICY, True)
     await device.async_set_setting("motion_sensor", True)
     await device.async_set_setting(CONST.MOTION_POLICY, True)
-    await device.async_set_setting(CONST.LED_COLOR, (0, 0, 0))
+    await device.async_set_setting(CONST.RGB_COLOR, (0, 0, 0))
     await device.async_set_setting("hs_color", (0, 0, 0))
     await device.async_set_setting(CONST.OUTDOOR_CHIME, 1)
     await device.async_set_setting(CONST.MOTION_THRESHOLD, 32)
@@ -547,10 +547,10 @@ async def test_async_change_setting(
         await device.async_set_setting(CONST.VIDEO_PROFILE, 5)
 
     with pytest.raises(exceptions.SkybellException):
-        await device.async_set_setting(CONST.LED_COLOR, [-1, 0, 0])
+        await device.async_set_setting(CONST.RGB_COLOR, ["1", 0, 0])
 
     with pytest.raises(exceptions.SkybellException):
-        await device.async_set_setting("hs_color", True)
+        await device.async_set_setting(CONST.RGB_COLOR, [300, -111, -10])
 
     with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.BRIGHTNESS, 101)

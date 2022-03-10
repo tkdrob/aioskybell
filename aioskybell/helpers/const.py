@@ -79,32 +79,17 @@ BRIGHTNESS = "led_intensity"
 DO_NOT_DISTURB = "do_not_disturb"
 DO_NOT_RING = "do_not_ring"
 LED_B = "green_b"
-LED_COLOR = "hs_color"
 LED_G = "green_g"
 LED_R = "green_r"
 LED_COLORS = [LED_R, LED_G, LED_B]
-MOTION = "motion_sensor"
 MOTION_POLICY = "motion_policy"
 MOTION_THRESHOLD = "motion_threshold"
 OUTDOOR_CHIME = "chime_level"
+RGB_COLOR = "rgb_color"
 VIDEO_PROFILE = "video_profile"
 
-ALL_SETTINGS = [
-    DO_NOT_DISTURB,
-    DO_NOT_RING,
-    OUTDOOR_CHIME,
-    MOTION_POLICY,
-    MOTION_THRESHOLD,
-    VIDEO_PROFILE,
-    LED_R,
-    LED_G,
-    LED_B,
-    BRIGHTNESS,
-]
-
 # SETTINGS Values
-DO_NOT_DISTURB_VALUES = ["True", "False"]
-DO_NOT_RING_VALUES = ["True", "False"]
+BOOL_STRINGS = ["True", "False"]
 
 OUTDOOR_CHIME_OFF = 0
 OUTDOOR_CHIME_LOW = 1
