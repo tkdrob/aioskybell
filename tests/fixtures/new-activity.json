@@ -1,16 +1,16 @@
 [
   {
     "videoState": "download:ready",
-    "_id": "1234567890ab1234567890ab",
-    "device": "5f8ef594362f31000833d959",
+    "_id": "1234567890ab1234567890ac",
+    "device": "0123456789abcdef01234567",
     "callId": "1234567890123-1234567890abcd1234567890abcd",
     "event": "device:sensor:motion",
     "state": "ready",
     "ttlStartDate": "2020-03-30T12:30:02.204Z",
     "createdAt": "2020-03-30T12:30:02.204Z",
     "updatedAt": "2020-03-30T12:30:02.566Z",
-    "id": "1234567890ab1234567890ab",
-    "media": "string",
-    "mediaSmall": "string"
+    "id": "1234567890ab1234567890ac",
+    "media": "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef.jpeg",
+    "mediaSmall": "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef_small.jpeg"
   }
 ]

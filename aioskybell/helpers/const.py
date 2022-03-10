@@ -43,8 +43,8 @@ TOKEN = "token"
 
 # DEVICE
 ACL = "acl"
+ACTIVITY = "activity"
 AVATAR = "avatar"
-AVATAR_URL = "url"
 ID = "id"
 LOCATION = "location"
 LOCATION_LAT = "lat"
@@ -54,6 +54,7 @@ NAME = "name"
 STATUS = "status"
 STATUS_UP = "up"
 TYPE = "type"
+URL = "url"
 
 # DEVICE INFO
 CHECK_IN = "checkedInAt"

@@ -16,7 +16,7 @@
   "address":"1.2.3.4",
   "clientId":"1234567890abcdef1234567890abcdef1234567890abcdef",
   "timestamp":"60000000000",
-  "deviceId":"01234567890abcdef12345678",
+  "deviceId":"01234567890abcdef1234567",
   "firmwareVersion":"7082",
   "checkedInAt":"2020-03-31T04:13:37.000Z",
   "status":{
