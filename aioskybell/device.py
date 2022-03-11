@@ -174,8 +174,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             value = bool(value)
             value = CONST.MOTION_POLICY_ON if value is True else CONST.MOTION_POLICY_OFF
             await self._async_set_setting({key: value})
-        if key in [CONST.LED_COLOR, "hs_color"]:
-            key = CONST.LED_COLOR
+        if key == CONST.RGB_COLOR:
             if not isinstance(value, (list, tuple)) or not all(
                 isinstance(item, int) for item in value
             ):
@@ -364,11 +363,11 @@ def _validate_setting(  # pylint:disable=too-many-branches
 ) -> None:
     """Validate the setting and value."""
     if setting == CONST.DO_NOT_DISTURB:
-        if value not in CONST.DO_NOT_DISTURB_VALUES:
+        if value not in CONST.BOOL_STRINGS:
             raise SkybellException(ERROR.INVALID_SETTING_VALUE, (setting, value))
 
     if setting == CONST.DO_NOT_RING:
-        if value not in CONST.DO_NOT_RING_VALUES:
+        if value not in CONST.BOOL_STRINGS:
             raise SkybellException(ERROR.INVALID_SETTING_VALUE, (setting, value))
 
     if setting == CONST.OUTDOOR_CHIME:
