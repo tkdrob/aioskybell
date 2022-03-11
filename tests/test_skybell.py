@@ -387,6 +387,11 @@ async def test_errors(aresponses: ResponsesMockServer, client: Skybell) -> None:
     with patch("aioskybell.asyncio.sleep"), pytest.raises(exceptions.SkybellException):
         await client.async_get_devices()
 
+    with patch("aioskybell.asyncio.sleep"), pytest.raises(exceptions.SkybellException):
+        await client.async_send_request(
+            "get", "https://skybell-thumbnails-stage.s3.amazonaws.com"
+        )
+
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
@@ -531,11 +536,6 @@ async def test_async_change_setting(
 
     with pytest.raises(exceptions.SkybellException):
         await client.async_get_device("foo")
-
-    with pytest.raises(exceptions.SkybellException):
-        await client.async_send_request(
-            "get", "https://skybell-thumbnails-stage.s3.amazonaws.com"
-        )
 
     with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.DO_NOT_DISTURB, 4)
