@@ -233,6 +233,7 @@ async def test_async_initialize_and_logout(aresponses: ResponsesMockServer) -> N
     devices_response(aresponses)
     users_me(aresponses)
     data = await client.async_initialize()
+    assert client._cache_path == "skybell_test@testcom.pickle"
     assert client.user_id == "1234567890abcdef12345678"
     assert client.user_first_name == "First"
     assert client.user_last_name == "Last"
@@ -385,6 +386,12 @@ async def test_errors(aresponses: ResponsesMockServer, client: Skybell) -> None:
     login_response(aresponses)
     with patch("aioskybell.asyncio.sleep"), pytest.raises(exceptions.SkybellException):
         await client.async_get_devices()
+
+    login_response(aresponses)
+    with patch("aioskybell.asyncio.sleep"), pytest.raises(exceptions.SkybellException):
+        await client.async_send_request(
+            "get", "https://skybell-thumbnails-stage.s3.amazonaws.com"
+        )
 
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
