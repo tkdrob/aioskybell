@@ -533,7 +533,9 @@ async def test_async_change_setting(
         await client.async_get_device("foo")
 
     with pytest.raises(exceptions.SkybellException):
-        await client.async_send_request("get", "https://skybell-thumbnails-stage.s3.amazonaws.com")
+        await client.async_send_request(
+            "get", "https://skybell-thumbnails-stage.s3.amazonaws.com"
+        )
 
     with pytest.raises(exceptions.SkybellException):
         await device.async_set_setting(CONST.DO_NOT_DISTURB, 4)
