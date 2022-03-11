@@ -233,6 +233,7 @@ async def test_async_initialize_and_logout(aresponses: ResponsesMockServer) -> N
     devices_response(aresponses)
     users_me(aresponses)
     data = await client.async_initialize()
+    assert client._cache_path == "skybell_test@testcom.pickle"
     assert client.user_id == "1234567890abcdef12345678"
     assert client.user_first_name == "First"
     assert client.user_last_name == "Last"

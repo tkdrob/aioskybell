@@ -37,7 +37,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         password: str = None,
         auto_login: bool = False,
         get_devices: bool = False,
-        cache_path: str = CONST.CACHE_PATH,
+        cache_path: str = "",
         disable_cache: bool = False,
         login_sleep: bool = True,
         session: ClientSession = None,
@@ -49,6 +49,10 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         self._disable_cache = disable_cache
         self._get_devices = get_devices
         self._password = password
+        if username is not None:
+            self._cache_path = f"{cache_path}skybell_{username.replace('.', '')}.pickle"
+        else:
+            self._cache_path = CONST.CACHE_PATH
         self._username = username
         if session is None:
             session = ClientSession()
