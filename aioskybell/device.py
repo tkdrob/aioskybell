@@ -152,7 +152,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         _LOGGER.debug(events)
 
         if event:
-            return events.get(event, {})
+            return events.get(f"device:sensor:{event}", {})
 
         latest: dict[str, str] = {}
         latest_date = None
