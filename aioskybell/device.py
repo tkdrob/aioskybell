@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime as dt
-from distutils.util import strtobool
 from typing import TYPE_CHECKING, cast
 
 from . import utils as UTILS
@@ -301,14 +300,12 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def do_not_disturb(self) -> bool:
         """Get if do not disturb is enabled."""
-        return bool(
-            strtobool(str(self._settings_json.get(CONST.DO_NOT_DISTURB, "false")))
-        )
+        return self._settings_json.get(CONST.DO_NOT_DISTURB) == "true"
 
     @property
     def do_not_ring(self) -> bool:
         """Get if do not ring is enabled."""
-        return bool(strtobool(str(self._settings_json.get(CONST.DO_NOT_RING))))
+        return self._settings_json.get(CONST.DO_NOT_RING) == "true"
 
     @property
     def outdoor_chime_level(self) -> int:
