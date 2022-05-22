@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime as dt
-from distutils.util import strtobool
 from typing import TYPE_CHECKING, cast
 
 from . import utils as UTILS
 from .exceptions import SkybellAuthenticationException, SkybellException
 from .helpers import const as CONST
 from .helpers import errors as ERROR
+from .helpers.models import AvatarJSON, DeviceJSON, InfoJSON, SettingsJSON
 
 if TYPE_CHECKING:
     from . import Skybell
@@ -22,33 +22,33 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     _skybell: Skybell
 
-    def __init__(self, device_json: dict[str, str], skybell: Skybell) -> None:
+    def __init__(self, device_json: DeviceJSON, skybell: Skybell) -> None:
         """Set up Skybell device."""
         self._activities: list[dict[str, str]] = []
-        self._avatar_json: dict[str, str] = {}
+        self._avatar_json = AvatarJSON()
         self._device_id = device_json.get(CONST.ID, "")
         self._device_json = device_json
-        self._info_json: dict[str, str | dict[str, str]] = {}
-        self._settings_json: dict[str, str | int] = {}
+        self._info_json = InfoJSON()
+        self._settings_json = SettingsJSON()
         self._skybell = skybell
         self._type = device_json.get(CONST.TYPE, "")
         self.images: dict[str, bytes] = {}
 
-    async def _async_device_request(self) -> dict[str, str | dict[str, str]]:
+    async def _async_device_request(self) -> DeviceJSON:
         url = str.replace(CONST.DEVICE_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(method="get", url=url)
 
-    async def _async_avatar_request(self) -> dict[str, str]:
+    async def _async_avatar_request(self) -> AvatarJSON:
         url = str.replace(CONST.DEVICE_AVATAR_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(method="get", url=url)
 
-    async def _async_info_request(self) -> dict[str, str | dict[str, str]]:
+    async def _async_info_request(self) -> InfoJSON:
         url = str.replace(CONST.DEVICE_INFO_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(method="get", url=url)
 
     async def _async_settings_request(
         self, method: str = "get", json_data: dict[str, str | int] = None
-    ) -> dict[str, str | int]:
+    ) -> SettingsJSON:
         url = str.replace(CONST.DEVICE_SETTINGS_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(
             method=method, url=url, json_data=json_data
@@ -214,7 +214,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def acl(self) -> str:
         """Get access level to device."""
-        return self._device_json.get(CONST.ACL, "")
+        return self._device_json[CONST.ACL]
 
     @property
     def owner(self) -> bool:
@@ -229,24 +229,22 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def mac(self) -> str | None:
         """Get device mac address."""
-        if mac := self._info_json.get("mac"):
-            return cast(str, mac)
-        return None
+        return self._info_json.get("mac")
 
     @property
     def serial_no(self) -> str:
         """Get device serial number."""
-        return cast(str, self._info_json.get("serialNo", ""))
+        return self._info_json.get("serialNo", "")
 
     @property
     def firmware_ver(self) -> str:
         """Get device firmware version."""
-        return cast(str, self._info_json.get("firmwareVersion", ""))
+        return self._info_json.get("firmwareVersion", "")
 
     @property
     def name(self) -> str:
         """Get device name."""
-        return self._device_json.get(CONST.NAME, "")
+        return self._device_json[CONST.NAME]
 
     @property
     def type(self) -> str:
@@ -261,7 +259,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def status(self) -> str:
         """Get the generic status of a device (up/down)."""
-        return self._device_json.get(CONST.STATUS, "")
+        return self._device_json[CONST.STATUS]
 
     @property
     def is_up(self) -> bool:
@@ -281,35 +279,33 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def image_url(self) -> str:
         """Get the most recent 'avatar' image."""
-        return self._avatar_json.get(CONST.URL, "")
+        return self._avatar_json[CONST.URL]
 
     @property
     def wifi_status(self) -> str:
         """Get the wifi status."""
-        status = cast(dict, self._info_json.get(CONST.STATUS, {}))
+        status = self._info_json.get(CONST.STATUS, {})
         return status.get(CONST.WIFI_LINK, "")
 
     @property
     def wifi_ssid(self) -> str:
         """Get the wifi ssid."""
-        return cast(str, self._info_json.get(CONST.WIFI_SSID, ""))
+        return self._info_json[CONST.WIFI_SSID]
 
     @property
     def last_check_in(self) -> str:
         """Get last check in timestamp."""
-        return cast(str, self._info_json.get(CONST.CHECK_IN, ""))
+        return self._info_json[CONST.CHECK_IN]
 
     @property
     def do_not_disturb(self) -> bool:
         """Get if do not disturb is enabled."""
-        return bool(
-            strtobool(str(self._settings_json.get(CONST.DO_NOT_DISTURB, "false")))
-        )
+        return self._settings_json.get(CONST.DO_NOT_DISTURB) == "true"
 
     @property
     def do_not_ring(self) -> bool:
         """Get if do not ring is enabled."""
-        return bool(strtobool(str(self._settings_json.get(CONST.DO_NOT_RING))))
+        return self._settings_json.get(CONST.DO_NOT_RING) == "true"
 
     @property
     def outdoor_chime_level(self) -> int:
