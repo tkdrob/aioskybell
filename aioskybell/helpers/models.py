@@ -84,7 +84,7 @@ class EventDict(dict):
 
     _id: str
     callId: str
-    createdAt: str | datetime
+    createdAt: datetime
     device: str
     event: str
     id: str

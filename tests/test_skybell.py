@@ -5,6 +5,7 @@ Test Skybell device functionality.
 Tests the device initialization and attributes of the Skybell device class.
 """
 import asyncio
+import datetime as dt
 import os
 from unittest.mock import patch
 
@@ -516,7 +517,9 @@ async def test_async_refresh_device(
     assert device.is_up is False
     assert device.location == ("-1.0", "1.0")
     assert device.wifi_ssid == "wifi"
-    assert device.last_check_in == "2020-03-31T04:13:37.000Z"
+    assert device.last_check_in == dt.datetime(
+        2020, 3, 31, 4, 13, 37, tzinfo=dt.timezone.utc
+    )
     assert device.do_not_disturb is False
     assert device.do_not_ring is False
     assert device.outdoor_chime_level == 1
@@ -532,7 +535,10 @@ async def test_async_refresh_device(
     )
 
     assert isinstance(device.activities(event="device:sensor:motion"), list)
-    assert isinstance(device.latest(event="device:sensor:motion"), dict)
+    assert isinstance(device.latest(event="motion"), dict)
+    assert device.latest(event="motion")[CONST.CREATED_AT] == dt.datetime(
+        2020, 3, 30, 12, 35, 2, 204000, tzinfo=dt.timezone.utc
+    )
 
     device_activities(aresponses, device.device_id)
     await device.async_update()
