@@ -536,6 +536,9 @@ async def test_async_refresh_device(
 
     assert isinstance(device.activities(event="device:sensor:motion"), list)
     assert isinstance(device.latest(event="motion"), dict)
+    assert device.latest(event="motion")[CONST.CREATED_AT] == dt.datetime(
+        2020, 3, 30, 12, 35, 2, tzinfo=dt.timezone.utc
+    )
 
     device_activities(aresponses, device.device_id)
     await device.async_update()

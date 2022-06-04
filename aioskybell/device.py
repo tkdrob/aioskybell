@@ -9,7 +9,8 @@ from . import utils as UTILS
 from .exceptions import SkybellAuthenticationException, SkybellException
 from .helpers import const as CONST
 from .helpers import errors as ERROR
-from .helpers.models import (
+
+from .helpers.models import (  # isort:skip
     AvatarDict,
     DeviceDict,
     EventDict,
