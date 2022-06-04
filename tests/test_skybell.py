@@ -339,6 +339,13 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
         == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef.jpeg"
     )
 
+    device._activities[0].pop(CONST.MEDIA_URL)
+    with patch(
+        "aioskybell.device.SkybellDevice._async_activities_request",
+        return_value=device._activities,
+    ):
+        await device._async_update_activities()
+
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
