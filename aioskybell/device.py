@@ -302,7 +302,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def wifi_ssid(self) -> str:
         """Get the wifi ssid."""
-        return self._info_json[CONST.WIFI_SSID]
+        return self._info_json.get(CONST.WIFI_SSID, "")
 
     @property
     def last_check_in(self) -> datetime:
