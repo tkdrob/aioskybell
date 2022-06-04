@@ -100,6 +100,8 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         activities = await self._async_activities_request()
         if self._activities:
             for act in activities:
+                if act.get(CONST.MEDIA_URL) is None:
+                    continue
                 if act[CONST.ID] not in [x[CONST.ID] for x in self._activities]:
                     self.images[
                         CONST.ACTIVITY
@@ -108,9 +110,8 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
                     )
         else:
             await self._async_update_events(activities=activities)
-            latest = self.latest()[CONST.MEDIA_URL]
             self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
-                "get", latest
+                "get", self.latest()[CONST.MEDIA_URL]
             )
         self._activities = activities
         _LOGGER.debug("Device Activities Response: %s", self._activities)
