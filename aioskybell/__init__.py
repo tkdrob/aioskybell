@@ -229,8 +229,8 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
                 headers=headers,
                 timeout=ClientTimeout(30),
             )
-        except (ClientConnectorError, ClientError) as exc:
-            _LOGGER.warning("Skybell request exception: %s", exc)
+        except (ClientConnectorError, ClientError) as ex:
+            _LOGGER.warning("Skybell request exception: %s", ex)
 
             if retry:
                 await self.async_login()
@@ -241,9 +241,9 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             if "cloud.myskybell.com" in url:
                 raise SkybellException(
                     self,
-                    f"Request exception for '{url}' with - {exc}",
-                ) from exc
-            raise SkybellException(self, ("Failed getting image: %s", exc)) from exc
+                    f"Request exception for '{url}' with - {ex}",
+                ) from ex
+            raise SkybellException(self, ("Failed getting image/video: %s", ex)) from ex
         if "cloud.myskybell.com" in url:
             _result = await response.json()
         else:

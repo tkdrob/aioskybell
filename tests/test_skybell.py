@@ -231,6 +231,48 @@ def new_activity_camera_image(aresponses: ResponsesMockServer, device: str) -> N
     )
 
 
+def activity_video(aresponses: ResponsesMockServer, device: str, activity: str) -> None:
+    """Generate activity video response."""
+    aresponses.add(
+        "cloud.myskybell.com",
+        f"/api/v3/devices/{device}/activities/{activity}/video/",
+        "get",
+        aresponses.Response(
+            status=200,
+            headers={"Content-Type": "application/json"},
+            text=load_fixture("video.json"),
+        ),
+    )
+
+
+def activity_video_download(aresponses: ResponsesMockServer) -> None:
+    """Generate activity video download response."""
+    aresponses.add(
+        "production-video-download.s3.us-west-2.amazonaws.com",
+        "/012345670123456789abcdef/1654307756676-0123456789120123456789abcdef_012345670123456789abcdef.mp4",
+        "get",
+        aresponses.Response(
+            status=200,
+            headers={"Content-Type": "binary/octet-stream"},
+            body=bytes(2),
+        ),
+    )
+
+
+def activity_video_delete(aresponses: ResponsesMockServer, device: str, activity: str) -> None:
+    """Generate activity video deletion response."""
+    aresponses.add(
+        "cloud.myskybell.com",
+        f"/api/v3/devices/{device}/activities/{activity}/",
+        "delete",
+        aresponses.Response(
+            status=200,
+            headers={"Content-Type": "application/json"},
+            text=load_fixture("video.json"),
+        ),
+    )
+
+
 @pytest.mark.asyncio
 async def test_loop() -> None:
     """Test loop usage is handled correctly."""
@@ -374,7 +416,17 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     with pytest.raises(exceptions.SkybellException):
         await client.async_get_device(device.device_id, refresh=True)
 
+    activity_video(aresponses, device.device_id, "1234567890ab1234567890ab")
+    activity_video_download(aresponses)
+    assert await device.async_get_activity_video("1234567890ab1234567890ab") == bytes(2)
+
+    activity_video(aresponses, device.device_id, "1234567890ab1234567890ab")
+    activity_video_download(aresponses)
+    activity_video_delete(aresponses, device.device_id, "1234567890ab1234567890ab")
+    await device.async_download_video(delete=True)
+
     loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, os.remove(f"{client._cache_path[:-7]}_1234567890ab1234567890ab.mp4"))
     loop.run_in_executor(None, os.remove(client._cache_path))
 
     assert not aresponses.assert_no_unused_routes()

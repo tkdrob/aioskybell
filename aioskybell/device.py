@@ -5,6 +5,8 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
+import aiofiles
+
 from . import utils as UTILS
 from .exceptions import SkybellAuthenticationException, SkybellException
 from .helpers import const as CONST
@@ -225,6 +227,34 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             await self._async_settings_request(method="patch", json_data=settings)
         except SkybellException:
             _LOGGER.warning("Exception changing settings: %s", settings)
+
+    async def async_get_activity_video(self, video: str | None = None) -> bytes:
+        """Get activity video. Return latest if no video specified"""
+        durl = str.replace(CONST.DEVICE_ACTIVITY_VIDEO_URL, "$DEVID$", self._device_id)
+        act_url = str.replace(durl, "$ACTID$", video or self.latest()[CONST.ID])
+        data = await self._skybell.async_send_request("get", act_url)
+        return await self._skybell.async_send_request("get", data[CONST.URL])
+
+    async def async_download_video(
+        self,
+        path: str = None,
+        limit: int = 1,
+        delete: bool = False,
+    ) -> None:
+        """Download video to specified path."""
+        videos = (video[CONST.ID] for video in self.activities(limit=limit))
+        _path = self._skybell._cache_path[:-7]
+        for vid in videos:
+            async with aiofiles.open(f"{path or _path}_{vid}.mp4", "wb") as file:
+                await file.write(await self.async_get_activity_video(vid))
+            if delete:
+                await self.async_delete_video(vid)
+
+    async def async_delete_video(self, video: str) -> None:
+        """Delete video with specified activity id."""
+        durl = str.replace(CONST.DEVICE_ACTIVITY_URL, "$DEVID$", self._device_id)
+        act_url = str.replace(durl, "$ACTID$", video)
+        await self._skybell.async_send_request("delete", act_url)
 
     @property
     def acl(self) -> str:
