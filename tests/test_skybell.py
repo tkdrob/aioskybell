@@ -543,6 +543,18 @@ async def test_async_refresh_device(
     device_activities(aresponses, device.device_id)
     await device.async_update()
 
+    device._info_json = {}
+    assert device.mac is None
+    assert device.serial_no == ""
+    assert device.firmware_ver == ""
+    assert device.wifi_ssid == ""
+    assert device.last_check_in == ""
+
+    device._settings_json = {}
+    assert device.do_not_disturb is False
+    assert device.do_not_ring is False
+    assert device.motion_sensor is False
+
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
 
