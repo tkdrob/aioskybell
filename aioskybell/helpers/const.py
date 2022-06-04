@@ -41,6 +41,13 @@ CLIENT_ID = "client_id"
 DEVICES = "devices"
 TOKEN = "token"
 
+# ATTRIBUTES
+ATTR_LAST_CHECK_IN = "last_check_in"
+ATTR_WIFI_SSID = "wifi_ssid"
+ATTR_WIFI_STATUS = "wifi_status"
+
+ATTR_OWNER_STATS = [ATTR_LAST_CHECK_IN, ATTR_WIFI_SSID, ATTR_WIFI_STATUS]
+
 # DEVICE
 ACL = "acl"
 ACTIVITY = "activity"
