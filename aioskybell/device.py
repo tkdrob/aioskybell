@@ -162,9 +162,12 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         events = cast(EventTypeDict, self._skybell.dev_cache(self, CONST.EVENT)) or {}
         _LOGGER.debug(events)
 
-        if event and (_event := events.get(f"device:sensor:{event}")):
-            _entry = {CONST.CREATED_AT: convert_date(_event[CONST.CREATED_AT])}
-            return cast(EventDict, _event | _entry)
+        if event:
+            if (_evt := cast(EventDict, events.get(f"device:sensor:{event}"))) is None:
+                _default = {CONST.CREATED_AT: "1970-01-01T00:00:00.000Z"}
+                _evt = events.get(f"application:on-{event}", _default)
+            _entry = {CONST.CREATED_AT: convert_date(_evt[CONST.CREATED_AT])}
+            return cast(EventDict, _evt | _entry)
 
         latest: EventDict = EventDict()
         latest_date = None

@@ -539,6 +539,9 @@ async def test_async_refresh_device(
     assert device.latest(event="motion")[CONST.CREATED_AT] == dt.datetime(
         2020, 3, 30, 12, 35, 2, 204000, tzinfo=dt.timezone.utc
     )
+    assert device.latest(event="demand")[CONST.CREATED_AT] == dt.datetime(
+        2020, 3, 30, 11, 35, 2, 204000, tzinfo=dt.timezone.utc
+    )
 
     device_activities(aresponses, device.device_id)
     await device.async_update()
