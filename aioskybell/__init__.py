@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any, cast
+from typing import Any, Collection, cast
 
 from aiohttp import ClientConnectorError
 from aiohttp.client import ClientError, ClientSession, ClientTimeout
@@ -22,6 +22,7 @@ from .device import SkybellDevice
 from .exceptions import SkybellAuthenticationException, SkybellException
 from .helpers import const as CONST
 from .helpers import errors as ERROR
+from .helpers.models import DeviceDict, DeviceTypeDict, EventTypeDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         self._user: dict[str, str] = {}
 
         # Create a new cache template
-        self._cache: dict[str, str | dict[str, CONST.DeviceType]] = {
+        self._cache: dict[str, str | dict[str, EventTypeDict]] = {
             CONST.APP_ID: UTILS.gen_id(),
             CONST.CLIENT_ID: UTILS.gen_id(),
             CONST.TOKEN: UTILS.gen_token(),
@@ -252,18 +253,17 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         if response.status == 401:
             raise SkybellAuthenticationException(self, _result)
         if response.status == 403:
-            self._cache = {}
             await UTILS.async_save_cache({}, self._cache_path)
             await self.async_initialize()
             return None
         raise SkybellException(self, _result)
 
-    def cache(self, key: str) -> str | dict[str, CONST.DeviceType]:
+    def cache(self, key: str) -> str | Collection[str]:
         """Get a cached value."""
         return self._cache.get(key, "")
 
     async def async_update_cache(
-        self, data: dict[str, str] | dict[str, dict[str, CONST.DeviceType]]
+        self, data: dict[str, str] | dict[str, DeviceTypeDict]
     ) -> None:
         """Update a cached value."""
         UTILS.update(self._cache, data)
@@ -271,9 +271,9 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
 
     def dev_cache(
         self, device: SkybellDevice, key: str = None
-    ) -> CONST.DeviceType | CONST.EventType | dict[str, str] | str | None:
+    ) -> dict[str, EventTypeDict] | EventTypeDict | None:
         """Get a cached value for a device."""
-        cache = cast(dict[str, CONST.DeviceType], self._cache.get(CONST.DEVICES, {}))
+        cache = cast(dict[str, DeviceDict], self._cache.get(CONST.DEVICES, {}))
         device_cache = cache.get(device.device_id)
 
         if device_cache and key:
@@ -282,7 +282,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         return device_cache
 
     async def async_update_dev_cache(
-        self, device: SkybellDevice, data: CONST.DeviceType
+        self, device: SkybellDevice, data: dict[str, EventTypeDict]
     ) -> None:
         """Update cached values for a device."""
         await self.async_update_cache({CONST.DEVICES: {device.device_id: data}})

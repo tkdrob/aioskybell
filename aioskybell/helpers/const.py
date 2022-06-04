@@ -136,6 +136,3 @@ VIDEO_PROFILE_VALUES = [
 LED_VALUES = [0, 255]
 
 BRIGHTNESS_VALUES = [0, 100]
-
-EventType = dict[str, dict[str, str]]
-DeviceType = dict[str, dict[str, dict[str, str]]]

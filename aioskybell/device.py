@@ -9,7 +9,14 @@ from . import utils as UTILS
 from .exceptions import SkybellAuthenticationException, SkybellException
 from .helpers import const as CONST
 from .helpers import errors as ERROR
-from .helpers.models import AvatarJSON, DeviceJSON, InfoJSON, SettingsJSON
+from .helpers.models import (
+    AvatarDict,
+    DeviceDict,
+    EventDict,
+    EventTypeDict,
+    InfoDict,
+    SettingsDict,
+)
 
 if TYPE_CHECKING:
     from . import Skybell
@@ -22,39 +29,39 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     _skybell: Skybell
 
-    def __init__(self, device_json: DeviceJSON, skybell: Skybell) -> None:
+    def __init__(self, device_json: DeviceDict, skybell: Skybell) -> None:
         """Set up Skybell device."""
-        self._activities: list[dict[str, str]] = []
-        self._avatar_json = AvatarJSON()
+        self._activities: list[EventDict] = []
+        self._avatar_json = AvatarDict()
         self._device_id = device_json.get(CONST.ID, "")
         self._device_json = device_json
-        self._info_json = InfoJSON()
-        self._settings_json = SettingsJSON()
+        self._info_json = InfoDict()
+        self._settings_json = SettingsDict()
         self._skybell = skybell
         self._type = device_json.get(CONST.TYPE, "")
         self.images: dict[str, bytes] = {}
 
-    async def _async_device_request(self) -> DeviceJSON:
+    async def _async_device_request(self) -> DeviceDict:
         url = str.replace(CONST.DEVICE_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(method="get", url=url)
 
-    async def _async_avatar_request(self) -> AvatarJSON:
+    async def _async_avatar_request(self) -> AvatarDict:
         url = str.replace(CONST.DEVICE_AVATAR_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(method="get", url=url)
 
-    async def _async_info_request(self) -> InfoJSON:
+    async def _async_info_request(self) -> InfoDict:
         url = str.replace(CONST.DEVICE_INFO_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(method="get", url=url)
 
     async def _async_settings_request(
         self, method: str = "get", json_data: dict[str, str | int] = None
-    ) -> SettingsJSON:
+    ) -> SettingsDict:
         url = str.replace(CONST.DEVICE_SETTINGS_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(
             method=method, url=url, json_data=json_data
         )
 
-    async def _async_activities_request(self) -> list[dict[str, str]]:
+    async def _async_activities_request(self) -> list[EventDict]:
         url = str.replace(CONST.DEVICE_ACTIVITIES_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(method="get", url=url) or []
 
@@ -119,10 +126,10 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         await self._async_update_events()
 
     async def _async_update_events(
-        self, activities: list[dict[str, str]] | None = None
+        self, activities: list[EventDict] | None = None
     ) -> None:
         """Update our cached list of latest activity events."""
-        events = cast(CONST.EventType, self._skybell.dev_cache(self, CONST.EVENT)) or {}
+        events = cast(EventTypeDict, self._skybell.dev_cache(self, CONST.EVENT)) or {}
 
         activities = activities or self._activities
         for activity in activities:
@@ -136,7 +143,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
         await self._skybell.async_update_dev_cache(self, {CONST.EVENT: events})
 
-    def activities(self, limit: int = 1, event: str = None) -> list[dict[str, str]]:
+    def activities(self, limit: int = 1, event: str = None) -> list[EventDict]:
         """Return device activity information."""
         activities = self._activities
 
@@ -149,7 +156,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     def latest(self, event: str = None) -> dict[str, str]:
         """Return the latest event activity (motion or button)."""
-        events = cast(CONST.EventType, self._skybell.dev_cache(self, CONST.EVENT)) or {}
+        events = cast(EventTypeDict, self._skybell.dev_cache(self, CONST.EVENT)) or {}
         _LOGGER.debug(events)
 
         if event:
@@ -270,7 +277,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     @property
     def location(self) -> tuple[str, str]:
         """Return lat and lng tuple."""
-        location = cast(dict, self._device_json.get(CONST.LOCATION, {}))
+        location = self._device_json.get(CONST.LOCATION, {})
 
         return (
             location.get(CONST.LOCATION_LAT, "0"),

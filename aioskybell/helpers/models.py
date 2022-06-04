@@ -1,8 +1,10 @@
 """Models for Skybell."""
 from __future__ import annotations
 
+from datetime import datetime
 
-class InfoJSON(dict):
+
+class InfoDict(dict):
     """Class for info."""
 
     address: str
@@ -28,7 +30,7 @@ class InfoJSON(dict):
     wifiTxPwrEeprom: str
 
 
-class DeviceJSON(dict):
+class DeviceDict(dict):
     """Class for device."""
 
     acl: str
@@ -45,14 +47,14 @@ class DeviceJSON(dict):
     uuid: str
 
 
-class AvatarJSON(dict):
+class AvatarDict(dict):
     """Class for avatar."""
 
     createdAt: str
     url: str
 
 
-class SettingsJSON(dict):
+class SettingsDict(dict):
     """Class for settings."""
 
     chime_level: str | None
@@ -75,3 +77,25 @@ class SettingsJSON(dict):
     ring_tone: str | None
     speaker_volume: str | None
     video_profile: str | None
+
+
+class EventDict(dict):
+    """Class for an event."""
+
+    _id: str
+    callId: str
+    createdAt: str | datetime
+    device: str
+    event: str
+    id: str
+    media: str
+    mediaSmall: str
+    state: str
+    ttlStartDate: str
+    updatedAt: str
+    videoState: str
+
+
+EventTypeDict = dict[str, EventDict]
+DeviceTypeDict = dict[str, dict[str, EventTypeDict]]
+DevicesDict = dict[str, DeviceTypeDict]
