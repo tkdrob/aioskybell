@@ -123,7 +123,21 @@ def device_info_forbidden(aresponses: ResponsesMockServer) -> None:
         "/api/v3/devices/012345670123456789abcdef/info/",
         "get",
         aresponses.Response(
-            status=401,
+            status=403,
+            headers={"Content-Type": "application/json"},
+            text=load_fixture("device-info.json"),
+        ),
+    )
+
+
+def device_info_internal_error(aresponses: ResponsesMockServer) -> None:
+    """Generate device info internal server error."""
+    aresponses.add(
+        "cloud.myskybell.com",
+        "/api/v3/devices/012345670123456789abcdef/info/",
+        "get",
+        aresponses.Response(
+            status=500,
             headers={"Content-Type": "application/json"},
             text=load_fixture("device-info-forbidden.json"),
         ),
@@ -345,6 +359,19 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
         return_value=device._activities,
     ):
         await device._async_update_activities()
+    device = client._devices["012345670123456789abcdef"]
+    device_info_forbidden(aresponses)
+    device_settings(aresponses, device.device_id)
+    device_activities(aresponses, device.device_id)
+    login_response(aresponses)
+    users_me(aresponses)
+    device_avatar(aresponses, device.device_id)
+    await client.async_get_device(device.device_id, refresh=True)
+
+    device_info_internal_error(aresponses)
+    device_avatar(aresponses, device.device_id)
+    with pytest.raises(exceptions.SkybellException):
+        await client.async_get_device(device.device_id, refresh=True)
 
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
