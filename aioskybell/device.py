@@ -401,5 +401,4 @@ def _validate_setting(  # pylint:disable=too-many-branches
 
 def convert_date(string: str) -> datetime:
     """Convert string to datetime."""
-    _parse = "%Y-%m-%dT%H:%M:%S.%fZ%z"
-    return datetime.strptime(f"{string}+00:00", _parse).replace(microsecond=0)
+    return datetime.strptime(f"{string}+00:00", "%Y-%m-%dT%H:%M:%S.%fZ%z")
