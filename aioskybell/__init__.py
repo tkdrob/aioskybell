@@ -251,6 +251,11 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             return _result
         if response.status == 401:
             raise SkybellAuthenticationException(self, _result)
+        if response.status == 403:
+            self._cache = {}
+            await UTILS.async_save_cache({}, self._cache_path)
+            await self.async_initialize()
+            return None
         raise SkybellException(self, _result)
 
     def cache(self, key: str) -> str | dict[str, CONST.DeviceType]:
