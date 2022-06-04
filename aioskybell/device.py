@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime as dt
+from datetime import datetime
 from typing import TYPE_CHECKING, cast
 
 from . import utils as UTILS
@@ -51,7 +51,9 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     async def _async_info_request(self) -> InfoDict:
         url = str.replace(CONST.DEVICE_INFO_URL, "$DEVID$", self.device_id)
-        return await self._skybell.async_send_request(method="get", url=url)
+        if data := await self._skybell.async_send_request(method="get", url=url):
+            data[CONST.CHECK_IN] = convert_date(data.get(CONST.CHECK_IN, ""))
+        return data
 
     async def _async_settings_request(
         self, method: str = "get", json_data: dict[str, str | int] = None
@@ -136,7 +138,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             event = activity[CONST.EVENT]
             created_at = activity[CONST.CREATED_AT]
 
-            if (old := events.get(event)) and created_at < old[CONST.CREATED_AT]:
+            if (old := events.get(event)) and created_at <= old[CONST.CREATED_AT]:
                 continue
 
             events[event] = activity
@@ -154,18 +156,19 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         # Return the requested number
         return activities[:limit]
 
-    def latest(self, event: str = None) -> dict[str, str]:
+    def latest(self, event: str = None) -> EventDict:
         """Return the latest event activity (motion or button)."""
         events = cast(EventTypeDict, self._skybell.dev_cache(self, CONST.EVENT)) or {}
         _LOGGER.debug(events)
 
-        if event:
-            return events.get(f"device:sensor:{event}", {})
+        if event and (_event := events.get(f"device:sensor:{event}")):
+            _entry = {CONST.CREATED_AT: convert_date(_event[CONST.CREATED_AT])}
+            return cast(EventDict, _event | _entry)
 
-        latest: dict[str, str] = {}
+        latest: EventDict = EventDict()
         latest_date = None
         for evt in events.values():
-            date = dt.strptime(evt.get(CONST.CREATED_AT, ""), "%Y-%m-%dT%H:%M:%S.%fZ")
+            date = convert_date(evt[CONST.CREATED_AT])
             if len(latest) == 0 or latest_date is None or latest_date < date:
                 latest = evt
                 latest_date = date
@@ -301,9 +304,9 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         return self._info_json[CONST.WIFI_SSID]
 
     @property
-    def last_check_in(self) -> str:
+    def last_check_in(self) -> datetime:
         """Get last check in timestamp."""
-        return self._info_json[CONST.CHECK_IN]
+        return self._info_json.get(CONST.CHECK_IN, "")
 
     @property
     def do_not_disturb(self) -> bool:
@@ -393,3 +396,9 @@ def _validate_setting(  # pylint:disable=too-many-branches
     if setting == CONST.BRIGHTNESS:
         if not CONST.BRIGHTNESS_VALUES[0] <= int(value) <= CONST.BRIGHTNESS_VALUES[1]:
             raise SkybellException(ERROR.INVALID_SETTING_VALUE, (setting, value))
+
+
+def convert_date(string: str) -> datetime:
+    """Convert string to datetime."""
+    _parse = "%Y-%m-%dT%H:%M:%S.%fZ%z"
+    return datetime.strptime(f"{string}+00:00", _parse).replace(microsecond=0)
