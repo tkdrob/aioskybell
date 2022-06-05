@@ -245,7 +245,9 @@ def activity_video_download(aresponses: ResponsesMockServer) -> None:
     )
 
 
-def activity_video_delete(aresponses: ResponsesMockServer, device: str, activity: str) -> None:
+def activity_video_delete(
+    aresponses: ResponsesMockServer, device: str, activity: str
+) -> None:
     """Generate activity video deletion response."""
     aresponses.add(
         "cloud.myskybell.com",
@@ -397,7 +399,9 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     await device.async_download_video(delete=True)
 
     loop = asyncio.get_running_loop()
-    loop.run_in_executor(None, os.remove(f"{client._cache_path[:-7]}_1234567890ab1234567890ac.mp4"))
+    loop.run_in_executor(
+        None, os.remove(f"{client._cache_path[:-7]}_1234567890ab1234567890ac.mp4")
+    )
     loop.run_in_executor(None, os.remove(client._cache_path))
 
     assert not aresponses.assert_no_unused_routes()
