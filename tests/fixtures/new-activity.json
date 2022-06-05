@@ -7,8 +7,8 @@
     "event": "device:sensor:motion",
     "state": "ready",
     "ttlStartDate": "2020-03-30T12:30:02.204Z",
-    "createdAt": "2020-03-30T12:30:02.204Z",
-    "updatedAt": "2020-03-30T12:30:02.566Z",
+    "createdAt": "2020-03-30T13:30:02.204Z",
+    "updatedAt": "2020-03-30T13:30:02.566Z",
     "id": "1234567890ab1234567890ac",
     "media": "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef.jpeg",
     "mediaSmall": "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef_small.jpeg"

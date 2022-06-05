@@ -117,20 +117,6 @@ def device_info(aresponses: ResponsesMockServer) -> None:
     )
 
 
-def device_info_forbidden(aresponses: ResponsesMockServer) -> None:
-    """Generate device info response."""
-    aresponses.add(
-        "cloud.myskybell.com",
-        "/api/v3/devices/012345670123456789abcdef/info/",
-        "get",
-        aresponses.Response(
-            status=403,
-            headers={"Content-Type": "application/json"},
-            text=load_fixture("device-info.json"),
-        ),
-    )
-
-
 def device_info_internal_error(aresponses: ResponsesMockServer) -> None:
     """Generate device info internal server error."""
     aresponses.add(
@@ -211,7 +197,7 @@ def activity_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
         aresponses.Response(
             status=200,
             headers={"Content-Type": "image/jpeg"},
-            body=bytes(1),
+            body=bytes(2),
         ),
     )
 
@@ -225,7 +211,7 @@ def new_activity_camera_image(aresponses: ResponsesMockServer, device: str) -> N
         aresponses.Response(
             status=200,
             headers={"Content-Type": "image/jpeg"},
-            body=bytes(2),
+            body=bytes(3),
         ),
         match_querystring=True,
     )
@@ -354,6 +340,7 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     device_activities(aresponses, device.device_id)
     avatar_camera_image(aresponses, device.device_id)
     activity_camera_image(aresponses, device.device_id)
+    activity_camera_image(aresponses, device.device_id)
     await client.async_get_device("012345670123456789abcdef", refresh=True)
 
     devices_response(aresponses)
@@ -382,51 +369,35 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
         device._activities[0][CONST.MEDIA_URL]
         == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244793-951012345670123456789abcdef_012345670123456789abcdef.jpeg"
     )
-    assert device.images == {"activity": b"\x00", "avatar": b"\x00"}
+    assert device.images == {"activity": b"\x00\x00", "avatar": b"\x00"}
     assert (
         device.image_url
         == "https://v3-production-devices-avatar.s3-us-west-2.amazonaws.com/012345670123456789abcdef.jpg"
     )
     new_activity_camera_image(aresponses, "012345670123456789abcdef")
     await device._async_update_activities()
-    assert device.images == {"activity": b"\x00\x00", "avatar": b"\x00"}
+    assert device.images == {"activity": b"\x00\x00\x00", "avatar": b"\x00"}
     assert device._activities[0][CONST.ID] == "1234567890ab1234567890ac"
     assert (
         device._activities[0][CONST.MEDIA_URL]
         == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef.jpeg"
     )
 
-    device._activities[0].pop(CONST.MEDIA_URL)
-    with patch(
-        "aioskybell.device.SkybellDevice._async_activities_request",
-        return_value=device._activities,
-    ):
-        await device._async_update_activities()
-    device = client._devices["012345670123456789abcdef"]
-    device_info_forbidden(aresponses)
-    device_settings(aresponses, device.device_id)
-    device_activities(aresponses, device.device_id)
     login_response(aresponses)
-    users_me(aresponses)
-    device_avatar(aresponses, device.device_id)
-    await client.async_get_device(device.device_id, refresh=True)
-
-    device_info_internal_error(aresponses)
-    device_avatar(aresponses, device.device_id)
     with pytest.raises(exceptions.SkybellException):
         await client.async_get_device(device.device_id, refresh=True)
 
-    activity_video(aresponses, device.device_id, "1234567890ab1234567890ab")
+    activity_video(aresponses, device.device_id, "1234567890ab1234567890ac")
     activity_video_download(aresponses)
-    assert await device.async_get_activity_video("1234567890ab1234567890ab") == bytes(2)
+    assert await device.async_get_activity_video("1234567890ab1234567890ac") == bytes(2)
 
-    activity_video(aresponses, device.device_id, "1234567890ab1234567890ab")
+    activity_video(aresponses, device.device_id, "1234567890ab1234567890ac")
     activity_video_download(aresponses)
-    activity_video_delete(aresponses, device.device_id, "1234567890ab1234567890ab")
+    activity_video_delete(aresponses, device.device_id, "1234567890ab1234567890ac")
     await device.async_download_video(delete=True)
 
     loop = asyncio.get_running_loop()
-    loop.run_in_executor(None, os.remove(f"{client._cache_path[:-7]}_1234567890ab1234567890ab.mp4"))
+    loop.run_in_executor(None, os.remove(f"{client._cache_path[:-7]}_1234567890ab1234567890ac.mp4"))
     loop.run_in_executor(None, os.remove(client._cache_path))
 
     assert not aresponses.assert_no_unused_routes()
@@ -499,6 +470,7 @@ async def test_async_refresh_device(
 
     data = await client.async_get_devices()
     device = data[0]
+    activity_camera_image(aresponses, device.device_id)
     device_activities(aresponses, device.device_id)
     device_settings(aresponses, device.device_id)
     device_avatar(aresponses, device.device_id)

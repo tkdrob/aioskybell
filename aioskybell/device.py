@@ -110,25 +110,15 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     async def _async_update_activities(self) -> None:
         """Update stored activities and update caches as required."""
         activities = await self._async_activities_request()
-        if self._activities:
-            for act in activities:
-                if act.get(CONST.MEDIA_URL) is None:
-                    continue
-                if act[CONST.ID] not in [x[CONST.ID] for x in self._activities]:
-                    self.images[
-                        CONST.ACTIVITY
-                    ] = await self._skybell.async_send_request(
-                        "get", act[CONST.MEDIA_URL]
-                    )
-        else:
-            await self._async_update_events(activities=activities)
-            self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
-                "get", self.latest()[CONST.MEDIA_URL]
-            )
+
         self._activities = activities
         _LOGGER.debug("Device Activities Response: %s", self._activities)
 
         await self._async_update_events()
+
+        self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
+            "get", self.latest()[CONST.MEDIA_URL]
+        )
 
     async def _async_update_events(
         self, activities: list[EventDict] | None = None
@@ -141,10 +131,8 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             event = activity[CONST.EVENT]
             created_at = activity[CONST.CREATED_AT]
 
-            if (old := events.get(event)) and created_at <= old[CONST.CREATED_AT]:
-                continue
-
-            events[event] = activity
+            if (old := events.get(event)) is None or created_at >= old[CONST.CREATED_AT]:
+                events[event] = activity
 
         await self._skybell.async_update_dev_cache(self, {CONST.EVENT: events})
 
