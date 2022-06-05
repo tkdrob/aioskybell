@@ -110,25 +110,15 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     async def _async_update_activities(self) -> None:
         """Update stored activities and update caches as required."""
         activities = await self._async_activities_request()
-        if self._activities:
-            for act in activities:
-                if act.get(CONST.MEDIA_URL) is None:
-                    continue
-                if act[CONST.ID] not in [x[CONST.ID] for x in self._activities]:
-                    self.images[
-                        CONST.ACTIVITY
-                    ] = await self._skybell.async_send_request(
-                        "get", act[CONST.MEDIA_URL]
-                    )
-        else:
-            await self._async_update_events(activities=activities)
-            self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
-                "get", self.latest()[CONST.MEDIA_URL]
-            )
+
         self._activities = activities
         _LOGGER.debug("Device Activities Response: %s", self._activities)
 
         await self._async_update_events()
+
+        self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
+            "get", self.latest()[CONST.MEDIA_URL]
+        )
 
     async def _async_update_events(
         self, activities: list[EventDict] | None = None
@@ -141,10 +131,8 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             event = activity[CONST.EVENT]
             created_at = activity[CONST.CREATED_AT]
 
-            if (old := events.get(event)) and created_at <= old[CONST.CREATED_AT]:
-                continue
-
-            events[event] = activity
+            if not (old := events.get(event)) or created_at >= old[CONST.CREATED_AT]:
+                events[event] = activity
 
         await self._skybell.async_update_dev_cache(self, {CONST.EVENT: events})
 
@@ -229,7 +217,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             _LOGGER.warning("Exception changing settings: %s", settings)
 
     async def async_get_activity_video(self, video: str | None = None) -> bytes:
-        """Get activity video. Return latest if no video specified"""
+        """Get activity video. Return latest if no video specified."""
         durl = str.replace(CONST.DEVICE_ACTIVITY_VIDEO_URL, "$DEVID$", self._device_id)
         act_url = str.replace(durl, "$ACTID$", video or self.latest()[CONST.ID])
         data = await self._skybell.async_send_request("get", act_url)
@@ -243,7 +231,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     ) -> None:
         """Download video to specified path."""
         videos = (video[CONST.ID] for video in self.activities(limit=limit))
-        _path = self._skybell._cache_path[:-7]
+        _path = self._skybell._cache_path[:-7]  # pylint:disable=protected-access
         for vid in videos:
             async with aiofiles.open(f"{path or _path}_{vid}.mp4", "wb") as file:
                 await file.write(await self.async_get_activity_video(vid))
