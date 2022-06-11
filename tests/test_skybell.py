@@ -7,10 +7,12 @@ Tests the device initialization and attributes of the Skybell device class.
 import asyncio
 import datetime as dt
 import os
+from asyncio.exceptions import TimeoutError as Timeout
 from unittest.mock import patch
 
 import aiofiles
 import pytest
+from aiohttp import ClientConnectorError
 from aresponses import ResponsesMockServer
 
 from aioskybell import Skybell, exceptions
@@ -674,3 +676,15 @@ async def test_cache(client: Skybell) -> None:
     assert os.path.exists(client._cache_path) is False
 
     assert UTILS.update("", "") == ""
+
+
+@pytest.mark.asyncio
+async def test_async_test_ports(client: Skybell) -> None:
+    """Test open ports."""
+    with patch("aioskybell.ClientSession.get") as session:
+        session.side_effect = ClientConnectorError("", OSError(61, ""))
+        assert await client.async_test_ports("1.2.3.4") is True
+
+    with patch("aioskybell.ClientSession.get") as session:
+        session.side_effect = Timeout
+        assert await client.async_test_ports("1.2.3.4") is False
