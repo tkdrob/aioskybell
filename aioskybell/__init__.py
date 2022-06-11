@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from asyncio.exceptions import TimeoutError as Timeout
 from typing import Any, Collection, cast
 
 from aiohttp import ClientConnectorError
@@ -301,3 +302,19 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         """Trigger a cache save."""
         if not self._disable_cache:
             await UTILS.async_save_cache(self._cache, self._cache_path)
+
+    async def async_test_ports(self, host: str, ports: list[int] = None) -> bool:
+        """Test if ports are open. Only use this for discovery."""
+        result = False
+        for port in ports or [6881, 6969]:
+            try:
+                await self._session.get(
+                    url=f"http://{host}:{port}",
+                    timeout=ClientTimeout(10),
+                )
+            except ClientConnectorError as ex:
+                if ex.errno == 61:
+                    result = True
+            except Timeout:
+                return False
+        return result
