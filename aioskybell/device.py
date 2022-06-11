@@ -216,27 +216,35 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         except SkybellException:
             _LOGGER.warning("Exception changing settings: %s", settings)
 
-    async def async_get_activity_video(self, video: str | None = None) -> bytes:
+    async def async_get_activity_video_url(self, video: str | None = None) -> str:
         """Get activity video. Return latest if no video specified."""
         durl = str.replace(CONST.DEVICE_ACTIVITY_VIDEO_URL, "$DEVID$", self._device_id)
         act_url = str.replace(durl, "$ACTID$", video or self.latest()[CONST.ID])
-        data = await self._skybell.async_send_request("get", act_url)
-        return await self._skybell.async_send_request("get", data[CONST.URL])
+        return (await self._skybell.async_send_request("get", act_url))[CONST.URL]
 
-    async def async_download_video(
+    async def async_download_videos(
         self,
         path: str = None,
+        video: str = None,
         limit: int = 1,
         delete: bool = False,
     ) -> None:
-        """Download video to specified path."""
-        videos = (video[CONST.ID] for video in self.activities(limit=limit))
+        """Download videos to specified path."""
         _path = self._skybell._cache_path[:-7]  # pylint:disable=protected-access
-        for vid in videos:
-            async with aiofiles.open(f"{path or _path}_{vid}.mp4", "wb") as file:
-                await file.write(await self.async_get_activity_video(vid))
-            if delete:
-                await self.async_delete_video(vid)
+        if video and (_id := [ev for ev in self._activities if video == ev[CONST.ID]]):
+            return await self._async_save_video(path or _path, _id[0], delete)
+        for event in self.activities(limit=limit):
+            await self._async_save_video(path or _path, event, delete)
+
+    async def _async_save_video(
+        self, path: str, event: EventDict, delete: bool
+    ) -> None:
+        """Write video from S3 to file."""
+        async with aiofiles.open(f"{path}_{event[CONST.CREATED_AT]}.mp4", "wb") as file:
+            url = await self.async_get_activity_video_url(event[CONST.ID])
+            await file.write(await self._skybell.async_send_request("get", url))
+        if delete:
+            await self.async_delete_video(event[CONST.ID])
 
     async def async_delete_video(self, video: str) -> None:
         """Delete video with specified activity id."""

@@ -145,7 +145,6 @@ def device_avatar(aresponses: ResponsesMockServer, device: str) -> None:
     )
 
 
-# Forbidden returns None
 def device_settings(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate device settings response."""
     aresponses.add(
@@ -390,17 +389,23 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
         await client.async_get_device(device.device_id, refresh=True)
 
     activity_video(aresponses, device.device_id, "1234567890ab1234567890ac")
+    assert (
+        await device.async_get_activity_video_url("1234567890ab1234567890ac")
+        == "https://production-video-download.s3.us-west-2.amazonaws.com/012345670123456789abcdef/1654307756676-0123456789120123456789abcdef_012345670123456789abcdef.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=01234567890123456789%2F20203030%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20200330T201225Z&X-Amz-Expires=300&X-Amz-Signature=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef&X-Amz-SignedHeaders=host"
+    )
+
+    activity_video(aresponses, device.device_id, "1234567890ab1234567890ac")
     activity_video_download(aresponses)
-    assert await device.async_get_activity_video("1234567890ab1234567890ac") == bytes(2)
+    await device.async_download_videos(video="1234567890ab1234567890ac")
 
     activity_video(aresponses, device.device_id, "1234567890ab1234567890ac")
     activity_video_download(aresponses)
     activity_video_delete(aresponses, device.device_id, "1234567890ab1234567890ac")
-    await device.async_download_video(delete=True)
+    await device.async_download_videos(delete=True)
 
     loop = asyncio.get_running_loop()
     loop.run_in_executor(
-        None, os.remove(f"{client._cache_path[:-7]}_1234567890ab1234567890ac.mp4")
+        None, os.remove(f"{client._cache_path[:-7]}_2020-03-30T13:30:02.204Z.mp4")
     )
     loop.run_in_executor(None, os.remove(client._cache_path))
 
