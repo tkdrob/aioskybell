@@ -42,7 +42,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         self._settings_json = SettingsDict()
         self._skybell = skybell
         self._type = device_json.get(CONST.TYPE, "")
-        self.images: dict[str, bytes] = {}
+        self.images: dict[str, bytes | None] = {CONST.ACTIVITY: None}
 
     async def _async_device_request(self) -> DeviceDict:
         url = str.replace(CONST.DEVICE_URL, "$DEVID$", self.device_id)
@@ -116,9 +116,10 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
         await self._async_update_events()
 
-        self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
-            "get", self.latest()[CONST.MEDIA_URL]
-        )
+        if url := self.latest().get(CONST.MEDIA_URL):
+            self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
+                "get", url
+            )
 
     async def _async_update_events(
         self, activities: list[EventDict] | None = None
