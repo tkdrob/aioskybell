@@ -363,7 +363,7 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     device_settings(aresponses, device.device_id)
     device_activities(aresponses, device.device_id)
     assert not device._info_json
-    assert device.images == {}
+    assert device.images == {"activity": None}
     for dev in await client.async_get_devices(refresh=True):
         assert isinstance(dev, SkybellDevice)
     new_activity(aresponses, device.device_id)
