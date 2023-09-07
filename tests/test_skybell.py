@@ -203,6 +203,21 @@ def activity_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
     )
 
 
+def activity_camera_image_not_found(
+    aresponses: ResponsesMockServer, device: str
+) -> None:
+    """Generate activity camera image not found response."""
+    aresponses.add(
+        "skybell-thumbnails-stage.s3.amazonaws.com",
+        f"/{device}/1646859244793-951{device}_{device}.jpeg",
+        "get",
+        aresponses.Response(
+            status=404,
+            headers={"Content-Type": "image/jpeg"},
+        ),
+    )
+
+
 def new_activity_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate activity camera image response."""
     aresponses.add(
@@ -595,6 +610,11 @@ async def test_async_refresh_device(
 
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, os.remove(client._cache_path))
+
+    device_activities(aresponses, device.device_id)
+    activity_camera_image_not_found(aresponses, device.device_id)
+    await device._async_update_activities()
+    assert device.images["activity"] is None
 
     assert aresponses.assert_no_unused_routes() is None
 
