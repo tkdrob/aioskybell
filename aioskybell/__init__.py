@@ -35,14 +35,14 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
 
     def __init__(  # pylint:disable=too-many-arguments
         self,
-        username: str = None,
-        password: str = None,
+        username: str | None = None,
+        password: str | None = None,
         auto_login: bool = False,
         get_devices: bool = False,
         cache_path: str = CONST.CACHE_PATH,
         disable_cache: bool = False,
         login_sleep: bool = True,
-        session: ClientSession = None,
+        session: ClientSession | None = None,
     ) -> None:
         """Initialize Skybell object."""
         self._auto_login = auto_login
@@ -92,7 +92,9 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         self._user = await self.async_send_request(method="get", url=CONST.USERS_ME_URL)
         return await self.async_get_devices()
 
-    async def async_login(self, username: str = None, password: str = None) -> bool:
+    async def async_login(
+        self, username: str | None = None, password: str | None = None
+    ) -> bool:
         """Execute Skybell login."""
         if username is not None:
             self._username = username
@@ -148,7 +150,6 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
     async def async_get_devices(self, refresh: bool = False) -> list[SkybellDevice]:
         """Get all devices from Skybell."""
         if refresh or len(self._devices) == 0:
-
             _LOGGER.info("Updating all devices...")
             response = await self.async_send_request("get", CONST.DEVICES_URL)
 
@@ -203,8 +204,8 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         self,
         method: str,
         url: str,
-        headers: dict[str, str] = None,
-        json_data: dict[str, str | int] = None,
+        headers: dict[str, str] | None = None,
+        json_data: dict[str, str | int] | None = None,
         retry: bool = True,
     ) -> Any:
         """Send requests to Skybell."""
@@ -267,7 +268,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         await self._async_save_cache()
 
     def dev_cache(
-        self, device: SkybellDevice, key: str = None
+        self, device: SkybellDevice, key: str | None = None
     ) -> dict[str, EventTypeDict] | EventTypeDict | None:
         """Get a cached value for a device."""
         cache = cast(dict[str, DeviceDict], self._cache.get(CONST.DEVICES, {}))
@@ -303,7 +304,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         if not self._disable_cache:
             await UTILS.async_save_cache(self._cache, self._cache_path)
 
-    async def async_test_ports(self, host: str, ports: list[int] = None) -> bool:
+    async def async_test_ports(self, host: str, ports: list[int] | None = None) -> bool:
         """Test if ports are open. Only use this for discovery."""
         result = False
         for port in ports or [6881, 6969]:

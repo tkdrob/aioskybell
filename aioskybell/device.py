@@ -59,7 +59,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         return data
 
     async def _async_settings_request(
-        self, method: str = "get", json_data: dict[str, str | int] = None
+        self, method: str = "get", json_data: dict[str, str | int] | None = None
     ) -> SettingsDict:
         url = str.replace(CONST.DEVICE_SETTINGS_URL, "$DEVID$", self.device_id)
         return await self._skybell.async_send_request(
@@ -72,10 +72,10 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     async def async_update(  # pylint:disable=too-many-arguments
         self,
-        device_json: dict[str, str | dict[str, str]] = None,
-        info_json: dict[str, str | dict[str, str]] = None,
-        settings_json: dict[str, str | int] = None,
-        avatar_json: dict[str, str] = None,
+        device_json: dict[str, str | dict[str, str]] | None = None,
+        info_json: dict[str, str | dict[str, str]] | None = None,
+        settings_json: dict[str, str | int] | None = None,
+        avatar_json: dict[str, str] | None = None,
         refresh: bool = True,
         get_devices: bool = False,
     ) -> None:
@@ -137,7 +137,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
         await self._skybell.async_update_dev_cache(self, {CONST.EVENT: events})
 
-    def activities(self, limit: int = 1, event: str = None) -> list[EventDict]:
+    def activities(self, limit: int = 1, event: str | None = None) -> list[EventDict]:
         """Return device activity information."""
         activities = self._activities
 
@@ -148,7 +148,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         # Return the requested number
         return activities[:limit]
 
-    def latest(self, event: str = None) -> EventDict:
+    def latest(self, event: str | None = None) -> EventDict:
         """Return the latest event activity (motion or button)."""
         events = cast(EventTypeDict, self._skybell.dev_cache(self, CONST.EVENT)) or {}
         _LOGGER.debug(events)
@@ -225,8 +225,8 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     async def async_download_videos(
         self,
-        path: str = None,
-        video: str = None,
+        path: str | None = None,
+        video: str | None = None,
         limit: int = 1,
         delete: bool = False,
     ) -> None:
