@@ -459,7 +459,7 @@ async def test_errors(aresponses: ResponsesMockServer, client: Skybell) -> None:
     login_response(aresponses)
     with patch("aioskybell.asyncio.sleep"), pytest.raises(exceptions.SkybellException):
         await client.async_send_request(
-            "get", "https://skybell-thumbnails-stage.s3.amazonaws.com"
+            "https://skybell-thumbnails-stage.s3.amazonaws.com"
         )
 
     loop = asyncio.get_running_loop()

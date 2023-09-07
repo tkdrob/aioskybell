@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import aiofiles
 
@@ -46,29 +46,29 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     async def _async_device_request(self) -> DeviceDict:
         url = str.replace(CONST.DEVICE_URL, "$DEVID$", self.device_id)
-        return await self._skybell.async_send_request(method="get", url=url)
+        return await self._skybell.async_send_request(url)
 
     async def _async_avatar_request(self) -> AvatarDict:
         url = str.replace(CONST.DEVICE_AVATAR_URL, "$DEVID$", self.device_id)
-        return await self._skybell.async_send_request(method="get", url=url)
+        return await self._skybell.async_send_request(url)
 
     async def _async_info_request(self) -> InfoDict:
         url = str.replace(CONST.DEVICE_INFO_URL, "$DEVID$", self.device_id)
-        if data := await self._skybell.async_send_request(method="get", url=url):
+        if data := await self._skybell.async_send_request(url):
             data[CONST.CHECK_IN] = convert_date(data.get(CONST.CHECK_IN, ""))
         return data
 
     async def _async_settings_request(
-        self, method: str = "get", json_data: dict[str, str | int] | None = None
+        self,
+        json: dict[str, str | int] | None = None,
+        **kwargs: Any,
     ) -> SettingsDict:
         url = str.replace(CONST.DEVICE_SETTINGS_URL, "$DEVID$", self.device_id)
-        return await self._skybell.async_send_request(
-            method=method, url=url, json_data=json_data
-        )
+        return await self._skybell.async_send_request(url, json=json, **kwargs)
 
     async def _async_activities_request(self) -> list[EventDict]:
         url = str.replace(CONST.DEVICE_ACTIVITIES_URL, "$DEVID$", self.device_id)
-        return await self._skybell.async_send_request(method="get", url=url) or []
+        return await self._skybell.async_send_request(url) or []
 
     async def async_update(  # pylint:disable=too-many-arguments
         self,
@@ -89,7 +89,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             result = await self._async_avatar_request()
             if result[CONST.CREATED_AT] != self._avatar_json.get(CONST.CREATED_AT):
                 self.images[CONST.AVATAR] = await self._skybell.async_send_request(
-                    "get", result[CONST.URL]
+                    result[CONST.URL]
                 )
             self._avatar_json = result
             UTILS.update(self._avatar_json, avatar_json or {})
@@ -117,9 +117,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         await self._async_update_events()
 
         if url := self.latest().get(CONST.MEDIA_URL):
-            self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(
-                "get", url
-            )
+            self.images[CONST.ACTIVITY] = await self._skybell.async_send_request(url)
 
     async def _async_update_events(
         self, activities: list[EventDict] | None = None
@@ -213,7 +211,9 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             _validate_setting(key, value)
 
         try:
-            await self._async_settings_request(method="patch", json_data=settings)
+            await self._async_settings_request(
+                json=settings, method=CONST.HTTPMethod.PATCH
+            )
         except SkybellException:
             _LOGGER.warning("Exception changing settings: %s", settings)
 
@@ -221,7 +221,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         """Get activity video. Return latest if no video specified."""
         durl = str.replace(CONST.DEVICE_ACTIVITY_VIDEO_URL, "$DEVID$", self._device_id)
         act_url = str.replace(durl, "$ACTID$", video or self.latest()[CONST.ID])
-        return (await self._skybell.async_send_request("get", act_url))[CONST.URL]
+        return (await self._skybell.async_send_request(act_url))[CONST.URL]
 
     async def async_download_videos(
         self,
@@ -243,7 +243,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         """Write video from S3 to file."""
         async with aiofiles.open(f"{path}_{event[CONST.CREATED_AT]}.mp4", "wb") as file:
             url = await self.async_get_activity_video_url(event[CONST.ID])
-            await file.write(await self._skybell.async_send_request("get", url))
+            await file.write(await self._skybell.async_send_request(url))
         if delete:
             await self.async_delete_video(event[CONST.ID])
 
@@ -251,7 +251,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         """Delete video with specified activity id."""
         durl = str.replace(CONST.DEVICE_ACTIVITY_URL, "$DEVID$", self._device_id)
         act_url = str.replace(durl, "$ACTID$", video)
-        await self._skybell.async_send_request("delete", act_url)
+        await self._skybell.async_send_request(act_url, method=CONST.HTTPMethod.DELETE)
 
     @property
     def acl(self) -> str:

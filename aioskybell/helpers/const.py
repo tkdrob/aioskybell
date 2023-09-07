@@ -1,6 +1,16 @@
 """AIOSkybell constants."""
 from enum import Enum
 
+
+class HTTPMethod(Enum):
+    """HTTPMethod Enum."""
+
+    DELETE = "DELETE"
+    GET = "GET"
+    PATCH = "PATCH"
+    POST = "POST"
+
+
 CACHE_PATH = "./skybell.pickle"
 
 # URLS

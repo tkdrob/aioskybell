@@ -15,8 +15,12 @@ import os
 from asyncio.exceptions import TimeoutError as Timeout
 from typing import Any, Collection, cast
 
-from aiohttp import ClientConnectorError
-from aiohttp.client import ClientError, ClientSession, ClientTimeout
+from aiohttp.client import ClientSession, ClientTimeout
+from aiohttp.client_exceptions import (
+    ClientConnectorError,
+    ClientError,
+    ClientResponseError,
+)
 
 from . import utils as UTILS
 from .device import SkybellDevice
@@ -89,7 +93,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             and self._auto_login
         ):
             await self.async_login()
-        self._user = await self.async_send_request(method="get", url=CONST.USERS_ME_URL)
+        self._user = await self.async_send_request(CONST.USERS_ME_URL)
         return await self.async_get_devices()
 
     async def async_login(
@@ -116,7 +120,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         }
 
         response = await self.async_send_request(
-            "post", CONST.LOGIN_URL, json_data=login_data, retry=False
+            CONST.LOGIN_URL, json=login_data, retry=False, method=CONST.HTTPMethod.POST
         )
 
         _LOGGER.debug("Login Response: %s", response)
@@ -151,7 +155,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         """Get all devices from Skybell."""
         if refresh or len(self._devices) == 0:
             _LOGGER.info("Updating all devices...")
-            response = await self.async_send_request("get", CONST.DEVICES_URL)
+            response = await self.async_send_request(CONST.DEVICES_URL)
 
             _LOGGER.debug("Get Devices Response: %s", response)
 
@@ -202,11 +206,11 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
 
     async def async_send_request(  # pylint:disable=too-many-arguments
         self,
-        method: str,
         url: str,
         headers: dict[str, str] | None = None,
-        json_data: dict[str, str | int] | None = None,
+        method: CONST.HTTPMethod = CONST.HTTPMethod.GET,
         retry: bool = True,
+        **kwargs: Any,
     ) -> Any:
         """Send requests to Skybell."""
         if len(self.cache(CONST.ACCESS_TOKEN)) == 0 and url != CONST.LOGIN_URL:
@@ -225,36 +229,26 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
 
         try:
             response = await self._session.request(
-                method=method,
-                url=url,
-                json=json_data,
+                method.value,
+                url,
                 headers=headers,
                 timeout=ClientTimeout(30),
+                **kwargs,
             )
-        except (ClientConnectorError, ClientError) as ex:
-            _LOGGER.warning("Skybell request exception: %s", ex)
-
+            if response.status == 401:
+                raise SkybellAuthenticationException(self, await response.text())
+            response.raise_for_status()
+        except (ClientConnectorError, ClientError, ClientResponseError) as ex:
             if retry:
                 await self.async_login()
 
                 return await self.async_send_request(
-                    method, url, headers, json_data, False
+                    url, headers=headers, method=method, retry=False, **kwargs
                 )
-            if "cloud.myskybell.com" in url:
-                raise SkybellException(
-                    self,
-                    f"Request exception for '{url}' with - {ex}",
-                ) from ex
-            raise SkybellException(self, ("Failed getting image/video: %s", ex)) from ex
-        if "cloud.myskybell.com" in url:
-            _result = await response.json()
-        else:
-            _result = await response.read()
-        if response.status < 400:
-            return _result
-        if response.status == 401:
-            raise SkybellAuthenticationException(self, _result)
-        raise SkybellException(self, _result)
+            raise SkybellException from ex
+        if response.content_type == "application/json":
+            return await response.json()
+        return await response.read()
 
     def cache(self, key: str) -> str | Collection[str]:
         """Get a cached value."""
@@ -310,7 +304,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         for port in ports or [6881, 6969]:
             try:
                 await self._session.get(
-                    url=f"http://{host}:{port}",
+                    f"http://{host}:{port}",
                     timeout=ClientTimeout(10),
                 )
             except ClientConnectorError as ex:
