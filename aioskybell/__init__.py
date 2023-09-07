@@ -236,7 +236,10 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
                 **kwargs,
             )
             if response.status == 401:
-                raise SkybellAuthenticationException(self, await response.text())
+                raise SkybellAuthenticationException(await response.text())
+            if response.status == 404:
+                _LOGGER.exception(await response.text())
+                return None
             response.raise_for_status()
         except (ClientConnectorError, ClientError, ClientResponseError) as ex:
             if retry:
