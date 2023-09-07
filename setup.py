@@ -15,7 +15,7 @@ setup(
     url="https://github.com/tkdrob/aioskybell",
     package_data={"aioskybell": ["py.typed"]},
     packages=find_packages(include=["aioskybell", "aioskybell*"]),
-    install_requires=["aiohttp>=3.6.1,<4.0", "aiofiles>=0.3.0", "ciso8601>=2.2.0"],
+    install_requires=["aiohttp>=3.6.1,<4.0", "aiofiles>=0.3.0", "ciso8601>=1.0.1"],
     keywords=["aioskybell", "skybell"],
     license="MIT license",
     classifiers=[
