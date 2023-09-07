@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import aiofiles
+from ciso8601 import parse_datetime  # pylint:disable=no-name-in-module
 
 from . import utils as UTILS
 from .exceptions import SkybellAuthenticationException, SkybellException
@@ -55,7 +56,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
     async def _async_info_request(self) -> InfoDict:
         url = str.replace(CONST.DEVICE_INFO_URL, "$DEVID$", self.device_id)
         if data := await self._skybell.async_send_request(url):
-            data[CONST.CHECK_IN] = convert_date(data.get(CONST.CHECK_IN, ""))
+            data[CONST.CHECK_IN] = parse_datetime(data.get(CONST.CHECK_IN, ""))
         return data
 
     async def _async_settings_request(
@@ -155,13 +156,13 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
             if (_evt := cast(EventDict, events.get(f"device:sensor:{event}"))) is None:
                 _default = {CONST.CREATED_AT: "1970-01-01T00:00:00.000Z"}
                 _evt = events.get(f"application:on-{event}", _default)
-            _entry = {CONST.CREATED_AT: convert_date(_evt[CONST.CREATED_AT])}
+            _entry = {CONST.CREATED_AT: parse_datetime(_evt[CONST.CREATED_AT])}
             return cast(EventDict, _evt | _entry)
 
         latest: EventDict = EventDict()
         latest_date = None
         for evt in events.values():
-            date = convert_date(evt[CONST.CREATED_AT])
+            date = parse_datetime(evt[CONST.CREATED_AT])
             if len(latest) == 0 or latest_date is None or latest_date < date:
                 latest = evt
                 latest_date = date
@@ -427,8 +428,3 @@ def _validate_setting(  # pylint:disable=too-many-branches
     if setting == CONST.BRIGHTNESS:
         if not CONST.BRIGHTNESS_VALUES[0] <= int(value) <= CONST.BRIGHTNESS_VALUES[1]:
             raise SkybellException(ERROR.INVALID_SETTING_VALUE, (setting, value))
-
-
-def convert_date(string: str) -> datetime:
-    """Convert string to datetime."""
-    return datetime.strptime(f"{string}+00:00", "%Y-%m-%dT%H:%M:%S.%fZ%z")
