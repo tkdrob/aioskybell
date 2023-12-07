@@ -44,6 +44,7 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         self._skybell = skybell
         self._type = device_json.get(CONST.TYPE, "")
         self.images: dict[str, bytes | None] = {CONST.ACTIVITY: None}
+        self._events: EventTypeDict = {}
 
     async def _async_device_request(self) -> DeviceDict:
         url = str.replace(CONST.DEVICE_URL, "$DEVID$", self.device_id)
@@ -124,17 +125,13 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
         self, activities: list[EventDict] | None = None
     ) -> None:
         """Update our cached list of latest activity events."""
-        events = cast(EventTypeDict, self._skybell.dev_cache(self, CONST.EVENT)) or {}
-
         activities = activities or self._activities
         for activity in activities:
             event = activity[CONST.EVENT]
-            created_at = activity[CONST.CREATED_AT]
+            created = activity[CONST.CREATED_AT]
 
-            if not (old := events.get(event)) or created_at >= old[CONST.CREATED_AT]:
-                events[event] = activity
-
-        await self._skybell.async_update_dev_cache(self, {CONST.EVENT: events})
+            if not (old := self._events.get(event)) or created >= old[CONST.CREATED_AT]:
+                self._events[event] = activity
 
     def activities(self, limit: int = 1, event: str | None = None) -> list[EventDict]:
         """Return device activity information."""
@@ -149,19 +146,19 @@ class SkybellDevice:  # pylint:disable=too-many-public-methods, too-many-instanc
 
     def latest(self, event: str | None = None) -> EventDict:
         """Return the latest event activity (motion or button)."""
-        events = cast(EventTypeDict, self._skybell.dev_cache(self, CONST.EVENT)) or {}
-        _LOGGER.debug(events)
+        _LOGGER.debug(self._events)
 
         if event:
-            if (_evt := cast(EventDict, events.get(f"device:sensor:{event}"))) is None:
+            _evt: dict[str, str]
+            if not (_evt := self._events.get(f"device:sensor:{event}", {})):
                 _default = {CONST.CREATED_AT: "1970-01-01T00:00:00.000Z"}
-                _evt = events.get(f"application:on-{event}", _default)
+                _evt = self._events.get(f"application:on-{event}", _default)
             _entry = {CONST.CREATED_AT: parse_datetime(_evt[CONST.CREATED_AT])}
             return cast(EventDict, _evt | _entry)
 
         latest: EventDict = EventDict()
         latest_date = None
-        for evt in events.values():
+        for evt in self._events.values():
             date = parse_datetime(evt[CONST.CREATED_AT])
             if len(latest) == 0 or latest_date is None or latest_date < date:
                 latest = evt

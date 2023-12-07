@@ -16,18 +16,14 @@ from asyncio.exceptions import TimeoutError as Timeout
 from typing import Any, Collection, cast
 
 from aiohttp.client import ClientSession, ClientTimeout
-from aiohttp.client_exceptions import (
-    ClientConnectorError,
-    ClientError,
-    ClientResponseError,
-)
+from aiohttp.client_exceptions import ClientConnectorError, ClientError
 
 from . import utils as UTILS
 from .device import SkybellDevice
 from .exceptions import SkybellAuthenticationException, SkybellException
 from .helpers import const as CONST
 from .helpers import errors as ERROR
-from .helpers.models import DeviceDict, DeviceTypeDict, EventTypeDict
+from .helpers.models import DeviceTypeDict, EventTypeDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,7 +116,7 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         }
 
         response = await self.async_send_request(
-            CONST.LOGIN_URL, json=login_data, retry=False, method=CONST.HTTPMethod.POST
+            CONST.LOGIN_URL, json=login_data, method=CONST.HTTPMethod.POST, retry=False
         )
 
         _LOGGER.debug("Login Response: %s", response)
@@ -237,11 +233,12 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
             )
             if response.status == 401:
                 raise SkybellAuthenticationException(await response.text())
-            if response.status == 404:
+            if response.status in (403, 404):
+                # 403/404 for expired request/device key no longer present in S3
                 _LOGGER.exception(await response.text())
                 return None
             response.raise_for_status()
-        except (ClientConnectorError, ClientError, ClientResponseError) as ex:
+        except ClientError as ex:
             if retry:
                 await self.async_login()
 
@@ -263,24 +260,6 @@ class Skybell:  # pylint:disable=too-many-instance-attributes
         """Update a cached value."""
         UTILS.update(self._cache, data)
         await self._async_save_cache()
-
-    def dev_cache(
-        self, device: SkybellDevice, key: str | None = None
-    ) -> dict[str, EventTypeDict] | EventTypeDict | None:
-        """Get a cached value for a device."""
-        cache = cast(dict[str, DeviceDict], self._cache.get(CONST.DEVICES, {}))
-        device_cache = cache.get(device.device_id)
-
-        if device_cache and key:
-            return device_cache.get(key)
-
-        return device_cache
-
-    async def async_update_dev_cache(
-        self, device: SkybellDevice, data: dict[str, EventTypeDict]
-    ) -> None:
-        """Update cached values for a device."""
-        await self.async_update_cache({CONST.DEVICES: {device.device_id: data}})
 
     async def _async_load_cache(self) -> None:
         """Load existing cache and merge for updating if required."""

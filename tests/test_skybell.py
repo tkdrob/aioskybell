@@ -14,6 +14,7 @@ import aiofiles
 import pytest
 from aiohttp import ClientConnectorError
 from aresponses import ResponsesMockServer
+from freezegun.api import FrozenDateTimeFactory
 
 from aioskybell import Skybell, exceptions
 from aioskybell import utils as UTILS
@@ -186,6 +187,7 @@ def avatar_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
             headers={"Content-Type": "image/jpeg"},
             body=bytes(1),
         ),
+        match_querystring=True,
     )
 
 
@@ -193,13 +195,14 @@ def activity_camera_image(aresponses: ResponsesMockServer, device: str) -> None:
     """Generate activity camera image response."""
     aresponses.add(
         "skybell-thumbnails-stage.s3.amazonaws.com",
-        f"/{device}/1646859244793-951{device}_{device}.jpeg",
+        f"/{device}/1646859244793-951{device}_{device}.jpeg?Expires=1585575303",
         "get",
         aresponses.Response(
             status=200,
             headers={"Content-Type": "image/jpeg"},
             body=bytes(2),
         ),
+        match_querystring=True,
     )
 
 
@@ -209,12 +212,13 @@ def activity_camera_image_not_found(
     """Generate activity camera image not found response."""
     aresponses.add(
         "skybell-thumbnails-stage.s3.amazonaws.com",
-        f"/{device}/1646859244793-951{device}_{device}.jpeg",
+        f"/{device}/1646859244793-951{device}_{device}.jpeg?Expires=1585575303",
         "get",
         aresponses.Response(
             status=404,
             headers={"Content-Type": "image/jpeg"},
         ),
+        match_querystring=True,
     )
 
 
@@ -222,7 +226,7 @@ def new_activity_camera_image(aresponses: ResponsesMockServer, device: str) -> N
     """Generate activity camera image response."""
     aresponses.add(
         "skybell-thumbnails-stage.s3.amazonaws.com",
-        f"/{device}/1646859244794-951{device}_{device}.jpeg",
+        f"/{device}/1646859244794-951{device}_{device}.jpeg?Expires=1585575303",
         "get",
         aresponses.Response(
             status=200,
@@ -321,8 +325,11 @@ async def test_async_initialize_and_logout(aresponses: ResponsesMockServer) -> N
 
 
 @pytest.mark.asyncio
-async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> None:
+async def test_get_devices(
+    aresponses: ResponsesMockServer, client: Skybell, freezer: FrozenDateTimeFactory
+) -> None:
     """Test getting devices."""
+    freezer.move_to("2023-03-30 13:33:00+00:00")
     login_response(aresponses)
     devices_response(aresponses)
     users_me(aresponses)
@@ -385,7 +392,7 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     assert device._activities[0][CONST.ID] == "1234567890ab1234567890ab"
     assert (
         device._activities[0][CONST.MEDIA_URL]
-        == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244793-951012345670123456789abcdef_012345670123456789abcdef.jpeg"
+        == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244793-951012345670123456789abcdef_012345670123456789abcdef.jpeg?Expires=1585575303"
     )
     assert device.images == {"activity": b"\x00\x00", "avatar": b"\x00"}
     assert (
@@ -398,7 +405,7 @@ async def test_get_devices(aresponses: ResponsesMockServer, client: Skybell) -> 
     assert device._activities[0][CONST.ID] == "1234567890ab1234567890ac"
     assert (
         device._activities[0][CONST.MEDIA_URL]
-        == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef.jpeg"
+        == "https://skybell-thumbnails-stage.s3.amazonaws.com/012345670123456789abcdef/1646859244794-951012345670123456789abcdef_012345670123456789abcdef.jpeg?Expires=1585575303"
     )
 
     login_response(aresponses)
@@ -440,11 +447,17 @@ async def test_errors(aresponses: ResponsesMockServer, client: Skybell) -> None:
         "/api/v3/login/",
         "post",
         aresponses.Response(
-            status=403,
+            status=401,
             headers={"Content-Type": "application/json"},
         ),
     )
-    with pytest.raises(exceptions.SkybellException):
+    with pytest.raises(exceptions.SkybellAuthenticationException):
+        await client.async_login()
+
+    with patch(
+        "aioskybell.ClientSession.request",
+        side_effect=ClientConnectorError("", OSError),
+    ), pytest.raises(exceptions.SkybellException):
         await client.async_login()
 
     with patch("aioskybell.asyncio.sleep"), patch(
@@ -485,9 +498,12 @@ async def test_errors(aresponses: ResponsesMockServer, client: Skybell) -> None:
 
 @pytest.mark.asyncio
 async def test_async_refresh_device(
-    aresponses: ResponsesMockServer, client: Skybell
+    aresponses: ResponsesMockServer,
+    client: Skybell,
+    freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test refreshing device."""
+    freezer.move_to("2020-03-30 13:33:00+00:00")
     login_response(aresponses)
     devices_response(aresponses)
     _device(aresponses)
