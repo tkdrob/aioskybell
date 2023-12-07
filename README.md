@@ -1,7 +1,7 @@
 # aioskybell
 
 [![codecov](https://codecov.io/gh/tkdrob/aioskybell/branch/master/graph/badge.svg)](https://codecov.io/gh/tkdrob/aioskybell)
-![python version](https://img.shields.io/badge/Python-3.9=><=3.10-blue.svg)
+![python version](https://img.shields.io/badge/Python-3.9=><=3.12-blue.svg)
 [![PyPI](https://img.shields.io/pypi/v/aioskybell)](https://pypi.org/project/aioskybell)
 ![Actions](https://github.com/tkdrob/aioskybell/workflows/Actions/badge.svg?branch=master)
 
